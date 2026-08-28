@@ -20,6 +20,12 @@ on Vercel, called cross-origin.
 See `GUIDE_PRODUITS.md` (in French) — no code, no terminal, just editing
 `products.json` through GitHub's web editor.
 
+## Editing the code with your own Claude
+
+See `GUIDE_CLAUDE.md` (in French) — how a teammate connects their own
+Claude account to this GitHub repo, for changes beyond what
+`GUIDE_PRODUITS.md` covers.
+
 ## Setup for real payments
 
 See `STRIPE_SETUP.md` in the parent project folder for the full walkthrough
