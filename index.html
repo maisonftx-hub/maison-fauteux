@@ -1022,14 +1022,35 @@
   // ever changes.
   var CHECKOUT_API_URL = 'https://maison-fauteux-nine.vercel.app/api/create-checkout-session';
 
-  // Browsers restore the previous scroll position on a manual refresh by
-  // default — meaning if you'd scrolled to Boutique and hit reload, you'd
-  // land back there instead of on the hero. Force every fresh load to
-  // start at the top instead.
+  // The site must always open on the hero, full stop — never mid-scroll.
+  // Three separate browser behaviours can undo that if only handled once:
+  //   1) history.scrollRestoration defaults to auto-restoring the old
+  //      scroll position on a manual refresh.
+  //   2) A URL still carrying #shop or #about (from clicking a nav link
+  //      earlier, then reloading/reopening that same address) makes the
+  //      browser natively jump straight to that section on load — before
+  //      any of our own JS even runs.
+  //   3) Back/forward navigation can restore the page from the browser's
+  //      cache (bfcache) exactly as it was, scroll position included,
+  //      without re-running this script at all — only a `pageshow` event
+  //      fires in that case.
+  // Handling all three, and re-asserting after fonts load (a late layout
+  // shift can occasionally re-trigger the browser's hash scroll too).
   if('scrollRestoration' in history){
     history.scrollRestoration = 'manual';
   }
-  window.scrollTo(0, 0);
+  if(window.location.hash && !/^#produit\//.test(window.location.hash)){
+    // keep #produit/<id> deep links (they open an overlay, not a scroll
+    // position) — clear anything else so the browser has nothing to jump to
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+  function forceScrollTop(){ window.scrollTo(0, 0); }
+  forceScrollTop();
+  window.addEventListener('pageshow', forceScrollTop);
+  window.addEventListener('load', forceScrollTop);
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(forceScrollTop);
+  }
 
   // The product catalog lives in products.json, not here — so adding or
   // editing a product means touching one plain-data file instead of this
