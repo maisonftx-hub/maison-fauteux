@@ -7,7 +7,7 @@
 <title>maison Fauteux</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,400;1,6..96,500;1,6..96,600;1,6..96,700&family=Archivo:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,400;1,6..96,500;1,6..96,600;1,6..96,700&family=Playfair+Display:ital,wght@1,600;1,700&family=Archivo:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
     /* uOttawa-family garnet baked into the neutrals themselves, not just
@@ -94,14 +94,16 @@
     font-variation-settings: "opsz" 96;
   }
 
-  /* the nav (top-left) and footer (bottom-left) wordmarks render at ~16-20px —
-     small enough that opsz 96's most extreme hairline strokes (the left leg
-     of the capital M especially) thin out to near-invisible. Dialing the
-     optical size back to 60 keeps the same dramatic italic character but
-     with strokes that actually hold up at this size; verified by rendering
-     the real variable font at both settings side by side. */
+  /* Bodoni Moda's hairline contrast is too extreme at the ~16-20px the nav
+     (top-left) and footer (bottom-left) wordmarks render at — even dialed
+     back on the opsz axis, the capital M's thin stroke stays fragile.
+     Playfair Display keeps the same dramatic serif-italic character (it's
+     the site's own fallback font) but at a bolder, non-variable cut that
+     holds up cleanly at small sizes — confirmed by rendering both side by
+     side rather than guessing. */
   .wordmark.wordmark-face{
-    font-variation-settings: "opsz" 60;
+    font-family: "Playfair Display", var(--display);
+    font-variation-settings: normal;
   }
 
   .eyebrow{
