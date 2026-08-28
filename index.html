@@ -22,16 +22,11 @@
     --ink-muted: #ab929a;
     --ink-faint: #977f88;
     --line: #3d2129;
-    /* the whole garnet family shares one true brick/burgundy hue (~7°) at
-       different lightness steps — the previous version's hue had blue
-       sitting above green, which reads as magenta/pink once lightened for
-       glows or text — but the solid button/border shades never actually
-       looked pink on their own, so those are back to the richer original.
-       Only the glow gradients and the text tint stay on the corrected
-       brick hue, since those were the specific spots that read pink. */
+    /* full palette back on the original rose/garnet hue — the whole family
+       (buttons, borders, glows, text) shares this single warmer tone again. */
     --garnet: #7c1f3f;
     --garnet-bright: #b33a5e;
-    --garnet-text: #c56e63;
+    --garnet-text: #cc5f7d;
 
     /* a quieter, more subdued step of the *same* burgundy family — for the
        header chrome and the About section — rather than a truly neutral
@@ -249,7 +244,7 @@
     content: "";
     position: absolute;
     inset: -10%;
-    background: radial-gradient(45% 45% at 50% 55%, rgba(124,50,40,0.38), transparent 70%);
+    background: radial-gradient(45% 45% at 50% 55%, rgba(124,31,63,0.38), transparent 70%);
     pointer-events: none;
   }
   .hero-pin-wrap.static .hero-pin{
@@ -611,7 +606,7 @@
     inset: 0;
     z-index: 400;
     background:
-      radial-gradient(60% 40% at 50% 0%, rgba(124,50,40,0.30), transparent 70%),
+      radial-gradient(60% 40% at 50% 0%, rgba(124,31,63,0.30), transparent 70%),
       var(--ground);
     overflow-y: auto;
     opacity: 0;
