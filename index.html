@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="maison Fauteux — la griffe officielle de l'association. Sweats, t-shirts et casquettes, en pieces faites sur commande.">
 <title>maison Fauteux</title>
+<script>
+  // Runs before anything else on the page — including before the browser
+  // gets a chance to jump to a URL fragment like #shop or #about (left
+  // over from clicking a nav link earlier, then reloading/reopening that
+  // same address). Stripping it here, as early as physically possible,
+  // stops that jump at the source rather than correcting it afterwards.
+  if('scrollRestoration' in history){
+    history.scrollRestoration = 'manual';
+  }
+  if(location.hash && !/^#produit\//.test(location.hash)){
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,400;1,6..96,500;1,6..96,600;1,6..96,700&family=Playfair+Display:ital,wght@1,600;1,700&family=Archivo:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -42,9 +55,14 @@
   }
 
   *{ box-sizing: border-box; }
-  html{ scroll-behavior: smooth; }
+  /* smooth scrolling is opt-in (via .smooth-ready, added by JS once the
+     page has safely settled at the top) rather than on by default — with
+     it on unconditionally, any stray scroll on load (a browser honoring a
+     leftover #hash, a bfcache restore, our own corrective scrollTo) would
+     animate visibly instead of just being instant/invisible */
+  html.smooth-ready{ scroll-behavior: smooth; }
   @media (prefers-reduced-motion: reduce){
-    html{ scroll-behavior: auto; }
+    html.smooth-ready{ scroll-behavior: auto; }
     *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
   }
 
@@ -1022,35 +1040,30 @@
   // ever changes.
   var CHECKOUT_API_URL = 'https://maison-fauteux-nine.vercel.app/api/create-checkout-session';
 
-  // The site must always open on the hero, full stop — never mid-scroll.
-  // Three separate browser behaviours can undo that if only handled once:
-  //   1) history.scrollRestoration defaults to auto-restoring the old
-  //      scroll position on a manual refresh.
-  //   2) A URL still carrying #shop or #about (from clicking a nav link
-  //      earlier, then reloading/reopening that same address) makes the
-  //      browser natively jump straight to that section on load — before
-  //      any of our own JS even runs.
-  //   3) Back/forward navigation can restore the page from the browser's
-  //      cache (bfcache) exactly as it was, scroll position included,
-  //      without re-running this script at all — only a `pageshow` event
-  //      fires in that case.
-  // Handling all three, and re-asserting after fonts load (a late layout
-  // shift can occasionally re-trigger the browser's hash scroll too).
-  if('scrollRestoration' in history){
-    history.scrollRestoration = 'manual';
+  // The site must always open on the hero, full stop — never mid-scroll,
+  // and never a visible scroll animation either. The <head> script (very
+  // top of the document) already strips a stray #shop/#about and sets
+  // scrollRestoration to manual as early as physically possible; this is
+  // the second layer, covering what only shows up once the DOM/JS here
+  // exists: bfcache-restored back/forward navigation (fires `pageshow`
+  // without re-running the page from scratch), and a late layout shift
+  // from web fonts loading in. `behavior:'instant'` is explicit so none of
+  // this ever animates, regardless of scroll-behavior CSS.
+  function forceScrollTop(){
+    window.scrollTo(0, 0); // universally-supported baseline
+    try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); } catch(e){ /* older engines without the options-object form — the line above already handled it */ }
   }
-  if(window.location.hash && !/^#produit\//.test(window.location.hash)){
-    // keep #produit/<id> deep links (they open an overlay, not a scroll
-    // position) — clear anything else so the browser has nothing to jump to
-    history.replaceState(null, '', window.location.pathname + window.location.search);
-  }
-  function forceScrollTop(){ window.scrollTo(0, 0); }
   forceScrollTop();
   window.addEventListener('pageshow', forceScrollTop);
   window.addEventListener('load', forceScrollTop);
   if(document.fonts && document.fonts.ready){
     document.fonts.ready.then(forceScrollTop);
   }
+  // Only now turn smooth scrolling on, for nav-link clicks and the like —
+  // never during the load sequence above, so nothing on load can animate.
+  window.addEventListener('load', function(){
+    document.documentElement.classList.add('smooth-ready');
+  });
 
   // The product catalog lives in products.json, not here — so adding or
   // editing a product means touching one plain-data file instead of this
