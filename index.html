@@ -488,6 +488,15 @@
   footer{ border-top: 1px solid var(--line); padding: 44px 0; background: var(--ground); }
   footer .wrap{ display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
   footer .fine{ font-family: var(--mono); font-size: 0.7rem; color: var(--ink-faint); letter-spacing: 0.03em; }
+  /* contact/address trust signal — visible on every page, not just the
+     confirmation screen, per research on trust signals in small stores */
+  footer .footer-contact{
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+  footer .footer-email{ text-decoration: none; color: var(--ink-faint); }
+  footer .footer-email:hover{ color: var(--ink); }
 
   /* ---------- Cart Drawer ---------- */
   .cart-scrim{
@@ -917,6 +926,10 @@
     <a href="#" class="wordmark wordmark-face" style="font-size:1rem;">Maison Fauteux</a>
     <span class="fine">FONDÉE EN 2026 &middot; PIÈCES FAITES SUR COMMANDE</span>
   </div>
+  <div class="wrap footer-contact">
+    <span class="fine">Pavillon Fauteux &middot; 57, rue Louis-Pasteur, Ottawa (Ontario) K1N&nbsp;6N5</span>
+    <a href="mailto:maisonftx@gmail.com" class="fine footer-email">maisonftx@gmail.com</a>
+  </div>
 </footer>
 
 <div class="cart-scrim" id="cartScrim"></div>
@@ -929,7 +942,7 @@
   <div class="cart-footer">
     <div class="cart-subtotal"><span>Sous-total</span><span id="cartSubtotal">0&nbsp;$</span></div>
     <button class="btn cart-checkout" id="cartCheckout" type="button">Commander</button>
-    <p class="cart-note">Frais de livraison et taxes calculés à la commande.</p>
+    <p class="cart-note">Taxes calculées à l'étape suivante &middot; livraison ou ramassage gratuit au choix.</p>
   </div>
 </aside>
 
@@ -950,13 +963,21 @@
           <span>Sous-total</span>
           <span id="checkoutSubtotal">0&nbsp;$</span>
         </div>
+        <div class="checkout-summary-row">
+          <span>Taxes (TVH 13&nbsp;%)</span>
+          <span id="checkoutTax">0&nbsp;$</span>
+        </div>
         <div class="checkout-summary-row muted">
           <span>Livraison</span>
-          <span>Gratuite</span>
+          <span>Choisie à l'étape suivante</span>
         </div>
         <hr class="rule">
+        <div class="checkout-summary-row">
+          <span>Total avant livraison</span>
+          <span id="checkoutTotal">0&nbsp;$</span>
+        </div>
         <button class="btn" id="checkoutPayBtn" type="button">Procéder au paiement sécurisé</button>
-        <p class="cart-note">Vous serez redirigé vers Stripe, notre partenaire de paiement sécurisé, pour entrer vos informations de livraison et de carte.</p>
+        <p class="cart-note">Ramassage gratuit au Pavillon Fauteux (certaines périodes) ou livraison &mdash; à choisir chez Stripe, notre partenaire de paiement sécurisé.</p>
       </div>
     </div>
   </div>
@@ -989,7 +1010,7 @@
     <span class="eyebrow">Commande confirmée</span>
     <h2 class="confirmation-title">Merci.</h2>
     <p class="confirmation-sub">Votre commande a été reçue avec succès. Un courriel de confirmation vous sera envoyé sous peu, avec les détails de livraison.</p>
-    <p class="confirmation-note">Des questions sur votre commande&nbsp;? Écrivez-nous à <a href="mailto:info@maisonfauteux.ca">info@maisonfauteux.ca</a>.</p>
+    <p class="confirmation-note">Des questions sur votre commande&nbsp;? Écrivez-nous à <a href="mailto:maisonftx@gmail.com">maisonftx@gmail.com</a>.</p>
     <button type="button" class="btn ghost" id="confirmationBack">Retour à la boutique</button>
   </div>
 </div>
@@ -1055,12 +1076,21 @@
     );
   }
 
+  // Ontario HST — the association is based at the Faculty of Law (Pavillon
+  // Fauteux, Ottawa), so this is a flat rate rather than Stripe's automatic
+  // per-province tax calculation. Keep this in sync with the same constant
+  // in api/create-checkout-session.js if it ever changes.
+  var TAX_RATE = 0.13;
+  function moneyPrecise(n){ return n.toFixed(2) + " $"; }
+
   function renderCart(){
     var itemsEl = document.getElementById('cartItems');
     var subtotalEl = document.getElementById('cartSubtotal');
     var bagCount = document.getElementById('bagCount');
     var checkoutItemsEl = document.getElementById('checkoutItems');
     var checkoutSubtotalEl = document.getElementById('checkoutSubtotal');
+    var checkoutTaxEl = document.getElementById('checkoutTax');
+    var checkoutTotalEl = document.getElementById('checkoutTotal');
 
     var html = cart.length === 0
       ? '<p class="cart-empty">Votre panier est vide.</p>'
@@ -1071,8 +1101,11 @@
 
     var subtotal = cart.reduce(function(sum, i){ return sum + i.price * i.qty; }, 0);
     var count = cart.reduce(function(sum, i){ return sum + i.qty; }, 0);
+    var tax = subtotal * TAX_RATE;
     subtotalEl.textContent = money(subtotal);
     if(checkoutSubtotalEl) checkoutSubtotalEl.textContent = money(subtotal);
+    if(checkoutTaxEl) checkoutTaxEl.textContent = moneyPrecise(tax);
+    if(checkoutTotalEl) checkoutTotalEl.textContent = moneyPrecise(subtotal + tax);
     bagCount.textContent = count;
   }
 
