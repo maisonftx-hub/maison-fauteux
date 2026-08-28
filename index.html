@@ -24,12 +24,13 @@
     --line: #3d2129;
     /* the whole garnet family shares one true brick/burgundy hue (~7°) at
        different lightness steps — the previous version's hue had blue
-       sitting above green, which is what reads as magenta/pink once
-       lightened for glows or text, even though the darkest (button) shade
-       looked fine on its own. Verified by rendering actual swatches, not
-       just computing hex math. */
-    --garnet: #7c3228;
-    --garnet-bright: #b84c3d;
+       sitting above green, which reads as magenta/pink once lightened for
+       glows or text — but the solid button/border shades never actually
+       looked pink on their own, so those are back to the richer original.
+       Only the glow gradients and the text tint stay on the corrected
+       brick hue, since those were the specific spots that read pink. */
+    --garnet: #7c1f3f;
+    --garnet-bright: #b33a5e;
     --garnet-text: #c56e63;
 
     /* a quieter, more subdued step of the *same* burgundy family — for the
