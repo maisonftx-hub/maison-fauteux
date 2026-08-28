@@ -351,7 +351,7 @@
     gap: clamp(28px, 3vw, 44px);
     margin-top: 50px;
   }
-  .product-card{ position: relative; }
+  .product-card{ position: relative; cursor: pointer; }
   .product-frame{
     background: var(--ground-raised);
     border: 1px solid var(--line);
@@ -703,6 +703,39 @@
   .checkout-summary .rule{ margin: 10px 0 18px; }
   .checkout-summary .btn{ margin-top: 4px; }
 
+  /* ---------- Product detail page ---------- */
+  .product-layout{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(40px, 6vw, 80px);
+    margin-top: 48px;
+    align-items: start;
+  }
+  .product-detail-sub{
+    font-family: var(--body);
+    color: var(--ink-muted);
+    font-size: 1rem;
+    margin-top: 8px;
+  }
+  .product-detail-price{
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.25rem;
+    color: var(--ink);
+    margin-top: 18px;
+  }
+  .product-detail-desc{
+    color: var(--ink-muted);
+    font-size: 1.02rem;
+    line-height: 1.75;
+    max-width: 48ch;
+    margin-top: 18px;
+  }
+  .product-detail .size-row{ margin-top: 28px; }
+  .product-detail .btn{ width: auto; margin-top: 26px; }
+  #productAddBtn.added{ background: var(--ink); border-color: var(--ink); color: var(--ground); }
+  #productAddBtn.shake{ animation: shake 0.4s ease; }
+
   .confirmation-inner{
     text-align: center;
     max-width: 640px;
@@ -730,6 +763,7 @@
   @media (max-width: 780px){
     .checkout-layout{ grid-template-columns: 1fr; }
     .checkout-summary{ position: static; }
+    .product-layout{ grid-template-columns: 1fr; }
   }
 
   @media (max-width: 900px){
@@ -738,7 +772,19 @@
     nav.links a.link-item{ display: none; }
   }
   @media (max-width: 560px){
-    .product-grid{ grid-template-columns: 1fr; }
+    /* three tight tiles per row on phones — a card this narrow can't fit
+       size-selection + add-to-cart, so tapping it opens the full product
+       page instead, where there's room to choose a size properly */
+    .product-grid{ grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .product-frame{ padding: 10%; }
+    .product-frame .flat-tag{ display: none; }
+    .product-info{ flex-direction: column; align-items: flex-start; gap: 2px; margin-top: 10px; }
+    .product-name{ font-size: 0.74rem; line-height: 1.25; }
+    .product-name .sub{ display: none; }
+    .product-price{ font-size: 0.68rem; color: var(--ink-muted); }
+    .product-card .size-row,
+    .product-card .product-add{ display: none; }
+
     .cart-item{ grid-template-columns: 52px 1fr auto; }
   }
 </style>
@@ -870,6 +916,28 @@
   </div>
 </div>
 
+<div class="page-view" id="productView" aria-hidden="true">
+  <div class="page-view-inner wrap">
+    <button type="button" class="page-back" id="productBack">&larr; Retour à la boutique</button>
+
+    <div class="product-layout">
+      <div class="product-frame" id="productArt"></div>
+
+      <div class="product-detail">
+        <span class="eyebrow" id="productEyebrow">Collection Fauteux Basics</span>
+        <h1 class="page-title wordmark-face" id="productTitle"></h1>
+        <p class="product-detail-sub" id="productDetailSub"></p>
+        <p class="product-detail-price" id="productDetailPrice"></p>
+        <p class="product-detail-desc" id="productDetailDesc"></p>
+
+        <div class="size-row" id="productSizeRow"></div>
+
+        <button class="btn" id="productAddBtn" type="button">Ajouter au panier</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="page-view" id="confirmationView" aria-hidden="true">
   <div class="page-view-inner wrap confirmation-inner">
     <span class="eyebrow">Commande confirmée</span>
@@ -900,31 +968,37 @@
     {
       id: "hoodie", name: "Le Hoodie", sub: "Sweat à Capuche Signature", price: 85, flat: "01",
       sizes: ["S","M","L","XL"],
+      desc: "Une coupe généreuse, une capuche doublée et le point de la maison sur la poche kangourou. Le sweat qu'on porte de septembre à avril.",
       art: '<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg"><path d="M32 18 C32 10 40 5 50 5 C60 5 68 10 68 18 L82 30 L74 42 L68 36 L68 100 C68 106 63 110 57 110 L43 110 C37 110 32 106 32 100 L32 36 L26 42 L18 30 Z"/><path d="M40 20 C43 26 57 26 60 20"/><circle cx="50" cy="55" r="1.4" fill="currentColor" stroke="none"/></svg>'
     },
     {
       id: "crewneck", name: "Le Crewneck", sub: "Col Rond Classique", price: 70, flat: "02",
       sizes: ["S","M","L","XL"],
+      desc: "Le col rond classique, façonné dans un molleton épais, pensé pour les journées fraîches sur le campus.",
       art: '<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg"><path d="M30 22 L14 34 L22 46 L32 38 L32 108 C32 111 35 113 38 113 L62 113 C65 113 68 111 68 108 L68 38 L78 46 L86 34 L70 22 C70 22 63 30 50 30 C37 30 30 22 30 22 Z"/></svg>'
     },
     {
       id: "casquette", name: "La Casquette", sub: "Casquette Logo", price: 40, flat: "03",
       sizes: ["Taille unique"],
+      desc: "Une casquette structurée, taille unique et ajustable, avec la broderie signature à l'avant.",
       art: '<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg"><path d="M20 55 C20 34 33 20 50 20 C67 20 80 34 80 55 Z"/><path d="M20 55 L4 60 L4 66 L28 62"/><path d="M50 20 L50 12"/><circle cx="50" cy="8" r="3"/></svg>'
     },
     {
       id: "tee", name: "Le Tee", sub: "T-Shirt Essentiel", price: 45, flat: "04",
       sizes: ["S","M","L","XL"],
+      desc: "Le t-shirt du quotidien — coton épais, coupe droite, fini brut. La base de tout le reste.",
       art: '<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg"><path d="M35 15 L18 24 L14 40 L26 44 L30 34 L30 105 C30 108 33 110 36 110 L64 110 C67 110 70 108 70 105 L70 34 L74 44 L86 40 L82 24 L65 15 C65 15 60 24 50 24 C40 24 35 15 35 15 Z"/></svg>'
     },
     {
       id: "quarterzip", name: "Le Quart-Zip", sub: "Pull Quart-Zip", price: 78, flat: "05",
       sizes: ["S","M","L","XL"],
+      desc: "Un quart-zip texturé, entre le hoodie et la chemise — assez habillé pour un cours, assez confortable pour tout le reste.",
       art: '<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg"><path d="M32 18 C32 10 40 5 50 5 C60 5 68 10 68 18 L82 30 L74 42 L68 36 L68 100 C68 106 63 110 57 110 L43 110 C37 110 32 106 32 100 L32 36 L26 42 L18 30 Z"/><path d="M48 8 L48 32 L44 32 M48 20 L52 20 M48 26 L52 26"/></svg>'
     },
     {
       id: "teeoversize", name: "Le Tee Oversize", sub: "T-Shirt Oversize", price: 48, flat: "06",
       sizes: ["S","M","L","XL"],
+      desc: "Une coupe oversize relâchée, épaules tombantes, pour un look plus décontracté sans perdre la ligne de la maison.",
       art: '<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg"><path d="M30 16 L10 26 L8 44 L24 47 L27 36 L24 108 C24 111 27 113 30 113 L70 113 C73 113 76 111 76 108 L73 36 L76 47 L92 44 L90 26 L70 16 C70 16 62 26 50 26 C38 26 30 16 30 16 Z"/></svg>'
     }
   ];
@@ -1017,7 +1091,8 @@
 
       if(!singleSize){
         card.querySelectorAll('.size-btn').forEach(function(btn){
-          btn.addEventListener('click', function(){
+          btn.addEventListener('click', function(e){
+            e.stopPropagation(); // quick-add on the card, not a click-through to the product page
             card.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
             btn.classList.add('active');
             card.dataset.selectedSize = btn.dataset.size;
@@ -1026,7 +1101,8 @@
       }
 
       var addBtn = card.querySelector('.product-add');
-      addBtn.addEventListener('click', function(){
+      addBtn.addEventListener('click', function(e){
+        e.stopPropagation();
         var size = card.dataset.selectedSize;
         if(!size){
           addBtn.classList.remove('shake');
@@ -1040,6 +1116,12 @@
         addBtn.textContent = 'Ajouté';
         addBtn.classList.add('added');
         setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('added'); }, 1100);
+      });
+
+      // clicking the card itself (image, name, price — anywhere but the
+      // size/add controls above) opens the full product page
+      card.addEventListener('click', function(){
+        openProductView(p);
       });
 
       grid.appendChild(card);
@@ -1196,6 +1278,107 @@
       document.body.style.overflow = '';
       scrollToShop();
     });
+  })();
+
+  // ---- Product detail page (one per product, deep-linkable via #produit/id) ----
+  var currentProductSize = '';
+
+  function findProductById(id){
+    for(var key in COLLECTIONS){
+      var found = COLLECTIONS[key].products.find(function(p){ return p.id === id; });
+      if(found) return found;
+    }
+    return null;
+  }
+
+  function openProductView(product, opts){
+    opts = opts || {};
+    currentProductSize = product.sizes.length === 1 ? product.sizes[0] : '';
+
+    document.getElementById('productArt').innerHTML =
+      '<span class="flat-tag">Croquis &middot; ' + product.flat + '</span>' + product.art;
+    document.getElementById('productTitle').textContent = product.name;
+    document.getElementById('productDetailSub').textContent = product.sub;
+    document.getElementById('productDetailPrice').textContent = money(product.price);
+    document.getElementById('productDetailDesc').textContent = product.desc || '';
+
+    var sizeRow = document.getElementById('productSizeRow');
+    var singleSize = product.sizes.length === 1;
+    sizeRow.innerHTML = product.sizes.map(function(s){
+      return '<button type="button" class="size-btn' + (singleSize ? ' active' : '') + '" data-size="' + s + '">' + s + '</button>';
+    }).join('');
+    if(!singleSize){
+      sizeRow.querySelectorAll('.size-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          sizeRow.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
+          btn.classList.add('active');
+          currentProductSize = btn.dataset.size;
+        });
+      });
+    }
+
+    var addBtn = document.getElementById('productAddBtn');
+    addBtn.textContent = 'Ajouter au panier';
+    addBtn.classList.remove('added', 'shake');
+    addBtn.onclick = function(){
+      if(!currentProductSize){
+        addBtn.classList.remove('shake');
+        void addBtn.offsetWidth;
+        addBtn.classList.add('shake');
+        addBtn.textContent = 'Choisir une taille';
+        setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('shake'); }, 1000);
+        return;
+      }
+      addToCart(product, currentProductSize);
+      addBtn.textContent = 'Ajouté';
+      addBtn.classList.add('added');
+      setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('added'); }, 1100);
+    };
+
+    document.getElementById('productView').classList.add('open');
+    document.getElementById('productView').setAttribute('aria-hidden', 'false');
+    document.getElementById('productView').scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+
+    if(opts.updateHash !== false){
+      history.pushState({ product: product.id }, '', '#produit/' + product.id);
+    }
+  }
+
+  function closeProductView(opts){
+    opts = opts || {};
+    document.getElementById('productView').classList.remove('open');
+    document.getElementById('productView').setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    if(opts.updateHash !== false && /^#produit\//.test(window.location.hash)){
+      history.pushState(null, '', window.location.pathname + window.location.search);
+    }
+    scrollToShop();
+  }
+
+  (function(){
+    document.getElementById('productBack').addEventListener('click', function(){
+      closeProductView();
+    });
+
+    // browser back/forward through a #produit/id link
+    window.addEventListener('popstate', function(){
+      var match = /^#produit\/(.+)$/.exec(window.location.hash);
+      if(match){
+        var p = findProductById(match[1]);
+        if(p) openProductView(p, { updateHash: false });
+      } else {
+        closeProductView({ updateHash: false });
+      }
+    });
+
+    // deep link straight to a product on first load, e.g. shared as
+    // https://.../#produit/hoodie
+    var initialMatch = /^#produit\/(.+)$/.exec(window.location.hash);
+    if(initialMatch){
+      var initialProduct = findProductById(initialMatch[1]);
+      if(initialProduct) openProductView(initialProduct, { updateHash: false });
+    }
   })();
 
   // ---- Scroll-pinned hero ----
