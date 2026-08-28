@@ -870,6 +870,12 @@
 </div>
 
 <script>
+  // The site is hosted on GitHub Pages (static-only), so the one bit of
+  // real server code — creating a Stripe Checkout Session — is called
+  // cross-origin, on Vercel. Update this if the Vercel project's domain
+  // ever changes.
+  var CHECKOUT_API_URL = 'https://maison-fauteux-nine.vercel.app/api/create-checkout-session';
+
   // Browsers restore the previous scroll position on a manual refresh by
   // default — meaning if you'd scrolled to Boutique and hit reload, you'd
   // land back there instead of on the hero. Force every fresh load to
@@ -1143,13 +1149,14 @@
       // payment actually restores it instead of losing it on page reload
       sessionStorage.setItem('mf_cart', JSON.stringify(cart));
 
-      fetch('/api/create-checkout-session', {
+      fetch(CHECKOUT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: cart.map(function(item){
             return { id: item.id, size: item.size, qty: item.qty };
-          })
+          }),
+          returnPath: window.location.pathname
         })
       })
         .then(function(r){ return r.json(); })
