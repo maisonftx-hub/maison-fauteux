@@ -195,7 +195,7 @@
     text-decoration: none;
     color: var(--ink);
     border: 1px solid var(--ink);
-    padding: 10px 16px;
+    padding: 13px 16px;
     background: transparent;
     cursor: pointer;
     transition: background 0.25s ease, color 0.25s ease;
@@ -431,7 +431,7 @@
     color: var(--ink-muted);
     background: transparent;
     border: 1px solid var(--line);
-    padding: 7px 12px;
+    padding: 11px 14px; /* was 7px/12px — kept the tap area closer to the ~44px touch-target minimum */
     cursor: pointer;
     transition: border-color 0.2s ease, color 0.2s ease;
   }
@@ -452,7 +452,7 @@
     color: var(--ink);
     background: transparent;
     border: 1px solid var(--line);
-    padding: 12px;
+    padding: 14px;
     cursor: pointer;
     transition: border-color 0.25s ease, color 0.25s ease;
   }
@@ -522,6 +522,7 @@
     border-bottom: 1px solid var(--line);
   }
   .cart-close{
+    position: relative;
     background: transparent;
     border: none;
     color: var(--ink);
@@ -529,6 +530,14 @@
     line-height: 1;
     cursor: pointer;
     padding: 0;
+  }
+  /* the visible "×" stays small and light, but the actual tap/click area
+     is expanded to the ~44px minimum recommended for touch targets
+     (Apple HIG / Material Design) via an invisible hit-area overlay */
+  .cart-close::before{
+    content: "";
+    position: absolute;
+    inset: -12px;
   }
 
   .cart-items{
@@ -569,6 +578,7 @@
     font-size: 0.78rem;
   }
   .qty-btn{
+    position: relative;
     width: 22px; height: 22px;
     border: 1px solid var(--line);
     background: transparent;
@@ -578,6 +588,16 @@
     line-height: 1;
   }
   .qty-btn:hover{ border-color: var(--ink); }
+  /* same invisible hit-area idea as .cart-close, but asymmetric: the two
+     qty buttons sit only 10px apart (gap on .cart-item-qty), so expanding
+     evenly on all sides would make their tap areas overlap each other and
+     the number between them. Plenty of vertical room instead, so grow tall
+     (~44px) and only slightly wider, keeping horizontal clearance intact. */
+  .qty-btn::before{
+    content: "";
+    position: absolute;
+    inset: -11px -3px;
+  }
   .cart-item-right{
     display: flex;
     flex-direction: column;
@@ -588,6 +608,7 @@
   }
   .cart-item-price{ font-family: var(--mono); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
   .cart-item-remove{
+    position: relative;
     font-family: var(--mono);
     font-size: 0.66rem;
     letter-spacing: 0.06em;
@@ -599,6 +620,14 @@
     padding: 0;
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+  /* was a 50×17px hit area — grows the invisible tap zone mostly downward
+     (into the row's own bottom padding) rather than evenly, so it doesn't
+     creep into the price line sitting just above it */
+  .cart-item-remove::before{
+    content: "";
+    position: absolute;
+    inset: -6px -8px -12px -8px;
   }
   .cart-item-remove:hover{ color: var(--garnet-text); }
 
@@ -663,8 +692,8 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    padding: 0;
-    margin-bottom: 40px;
+    padding: 10px 0; /* was 0 — a text-height-only tap target (~19px) is under the ~44px touch-target minimum */
+    margin: -10px 0 30px;
     transition: color 0.2s ease;
   }
   .page-back:hover{ color: var(--ink); }
@@ -777,6 +806,14 @@
     .checkout-layout{ grid-template-columns: 1fr; }
     .checkout-summary{ position: static; }
     .product-layout{ grid-template-columns: 1fr; }
+    /* keeps "Ajouter au panier" reachable in the thumb zone on a stacked
+       mobile product page instead of letting it scroll away above a long
+       description — sticks to the bottom of the scrollable page view,
+       same trick as .checkout-summary above, just anchored to the bottom */
+    .product-detail .btn{
+      position: sticky;
+      bottom: 16px;
+    }
   }
 
   @media (max-width: 900px){
@@ -915,11 +952,7 @@
         </div>
         <div class="checkout-summary-row muted">
           <span>Livraison</span>
-          <span>Calculée à l'étape suivante</span>
-        </div>
-        <div class="checkout-summary-row muted">
-          <span>Taxes</span>
-          <span>Calculées à l'étape suivante</span>
+          <span>Gratuite</span>
         </div>
         <hr class="rule">
         <button class="btn" id="checkoutPayBtn" type="button">Procéder au paiement sécurisé</button>
