@@ -1,0 +1,62 @@
+[
+  {
+    "id": "hoodie",
+    "name": "Le Hoodie",
+    "sub": "Sweat à Capuche Signature",
+    "price": 85,
+    "flat": "01",
+    "sizes": ["S", "M", "L", "XL"],
+    "desc": "Une coupe généreuse, une capuche doublée et le point de la maison sur la poche kangourou. Le sweat qu'on porte de septembre à avril.",
+    "art": "<svg viewBox=\"0 0 100 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M32 18 C32 10 40 5 50 5 C60 5 68 10 68 18 L82 30 L74 42 L68 36 L68 100 C68 106 63 110 57 110 L43 110 C37 110 32 106 32 100 L32 36 L26 42 L18 30 Z\"/><path d=\"M40 20 C43 26 57 26 60 20\"/><circle cx=\"50\" cy=\"55\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/></svg>"
+  },
+  {
+    "id": "crewneck",
+    "name": "Le Crewneck",
+    "sub": "Col Rond Classique",
+    "price": 70,
+    "flat": "02",
+    "sizes": ["S", "M", "L", "XL"],
+    "desc": "Le col rond classique, façonné dans un molleton épais, pensé pour les journées fraîches sur le campus.",
+    "art": "<svg viewBox=\"0 0 100 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M30 22 L14 34 L22 46 L32 38 L32 108 C32 111 35 113 38 113 L62 113 C65 113 68 111 68 108 L68 38 L78 46 L86 34 L70 22 C70 22 63 30 50 30 C37 30 30 22 30 22 Z\"/></svg>"
+  },
+  {
+    "id": "casquette",
+    "name": "La Casquette",
+    "sub": "Casquette Logo",
+    "price": 40,
+    "flat": "03",
+    "sizes": ["Taille unique"],
+    "desc": "Une casquette structurée, taille unique et ajustable, avec la broderie signature à l'avant.",
+    "art": "<svg viewBox=\"0 0 100 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 55 C20 34 33 20 50 20 C67 20 80 34 80 55 Z\"/><path d=\"M20 55 L4 60 L4 66 L28 62\"/><path d=\"M50 20 L50 12\"/><circle cx=\"50\" cy=\"8\" r=\"3\"/></svg>"
+  },
+  {
+    "id": "tee",
+    "name": "Le Tee",
+    "sub": "T-Shirt Essentiel",
+    "price": 45,
+    "flat": "04",
+    "sizes": ["S", "M", "L", "XL"],
+    "desc": "Le t-shirt du quotidien — coton épais, coupe droite, fini brut. La base de tout le reste.",
+    "art": "<svg viewBox=\"0 0 100 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M35 15 L18 24 L14 40 L26 44 L30 34 L30 105 C30 108 33 110 36 110 L64 110 C67 110 70 108 70 105 L70 34 L74 44 L86 40 L82 24 L65 15 C65 15 60 24 50 24 C40 24 35 15 35 15 Z\"/></svg>"
+  },
+  {
+    "id": "quarterzip",
+    "name": "Le Quart-Zip",
+    "sub": "Pull Quart-Zip",
+    "price": 78,
+    "flat": "05",
+    "sizes": ["S", "M", "L", "XL"],
+    "desc": "Un quart-zip texturé, entre le hoodie et la chemise — assez habillé pour un cours, assez confortable pour tout le reste.",
+    "art": "<svg viewBox=\"0 0 100 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M32 18 C32 10 40 5 50 5 C60 5 68 10 68 18 L82 30 L74 42 L68 36 L68 100 C68 106 63 110 57 110 L43 110 C37 110 32 106 32 100 L32 36 L26 42 L18 30 Z\"/><path d=\"M48 8 L48 32 L44 32 M48 20 L52 20 M48 26 L52 26\"/></svg>"
+  },
+  {
+    "id": "teeoversize",
+    "name": "Le Tee Oversize",
+    "sub": "T-Shirt Oversize",
+    "price": 48,
+    "flat": "06",
+    "sizes": ["S", "M", "L", "XL"],
+    "desc": "Une coupe oversize relâchée, épaules tombantes, pour un look plus décontracté sans perdre la ligne de la maison.",
+    "art": "<svg viewBox=\"0 0 100 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M30 16 L10 26 L8 44 L24 47 L27 36 L24 108 C24 111 27 113 30 113 L70 113 C73 113 76 111 76 108 L73 36 L76 47 L92 44 L90 26 L70 16 C70 16 62 26 50 26 C38 26 30 16 30 16 Z\"/></svg>"
+  }
+]

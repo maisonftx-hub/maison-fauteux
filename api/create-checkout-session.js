@@ -10,6 +10,7 @@
 // the repo. See ../STRIPE_SETUP.md for the one-time setup steps.
 
 const Stripe = require('stripe');
+const PRODUCTS = require('../products.json');
 
 const ALLOWED_ORIGINS = [
   'https://maisonftx-hub.github.io',
@@ -54,16 +55,12 @@ module.exports = async (req, res) => {
       return;
     }
 
-    // Re-derive line items server-side from a fixed catalog rather than
+    // Re-derive line items server-side from products.json rather than
     // trusting client-sent prices — never trust a price the browser sends.
-    const CATALOG = {
-      hoodie: { name: 'Le Hoodie', price: 85 },
-      crewneck: { name: 'Le Crewneck', price: 70 },
-      casquette: { name: 'La Casquette', price: 40 },
-      tee: { name: 'Le Tee', price: 45 },
-      quarterzip: { name: 'Le Quart-Zip', price: 78 },
-      teeoversize: { name: 'Le Tee Oversize', price: 48 }
-    };
+    // This is the same file the storefront reads its catalog from, so a
+    // product/price edit only ever has to be made in one place.
+    const CATALOG = {};
+    PRODUCTS.forEach((p) => { CATALOG[p.id] = { name: p.name, price: p.price }; });
 
     const line_items = items.map((item) => {
       const product = CATALOG[item.id];
