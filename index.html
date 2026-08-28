@@ -371,6 +371,16 @@
     transition: transform 0.5s cubic-bezier(.2,.7,.2,1);
   }
   .product-card:hover .product-frame svg{ transform: translateY(-4px) scale(1.03); }
+  /* a real product photo (products.json "image") fills the frame edge to
+     edge instead of sitting inset like the placeholder sketch */
+  .product-frame.has-image{ padding: 0; }
+  .product-frame img{
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s cubic-bezier(.2,.7,.2,1);
+  }
+  .product-card:hover .product-frame img{ transform: scale(1.03); }
   .product-frame .flat-tag{
     position: absolute;
     top: 12px; left: 12px;
@@ -545,6 +555,7 @@
     display: flex; align-items: center; justify-content: center;
   }
   .cart-item-thumb svg{ width: 70%; height: 70%; stroke: var(--ink-muted); fill: none; stroke-width: 1.2; }
+  .cart-item-thumb img{ width: 100%; height: 100%; object-fit: cover; display: block; }
   .cart-item-name{ font-family: var(--display); font-size: 1rem; }
   .cart-item-meta{ font-family: var(--mono); font-size: 0.72rem; color: var(--ink-muted); margin-top: 4px; }
   .cart-item-qty{
@@ -973,10 +984,25 @@
 
   function money(n){ return n.toFixed(0) + " $"; }
 
+  // A product shows its real photo (products.json "image") once one is
+  // set; until then it falls back to the placeholder line-art sketch.
+  function productVisualHTML(p, showFlatTag){
+    var visual = p.image
+      ? '<img src="' + p.image + '" alt="' + p.name + '" loading="lazy">'
+      : p.art;
+    var tag = (showFlatTag && !p.image)
+      ? '<span class="flat-tag">Croquis &middot; ' + p.flat + '</span>'
+      : '';
+    return tag + visual;
+  }
+
   function cartItemHTML(item, i){
+    var thumb = item.image
+      ? '<img src="' + item.image + '" alt="' + item.name + '" loading="lazy">'
+      : item.art;
     return (
       '<div class="cart-item" data-index="' + i + '">' +
-        '<div class="cart-item-thumb">' + item.art + '</div>' +
+        '<div class="cart-item-thumb">' + thumb + '</div>' +
         '<div>' +
           '<div class="cart-item-name wordmark-face">' + item.name + '</div>' +
           '<div class="cart-item-meta">Taille ' + item.size + '</div>' +
@@ -1020,7 +1046,7 @@
     if(existing){
       existing.qty += 1;
     } else {
-      cart.push({ id: product.id, name: product.name, size: size, price: product.price, qty: 1, art: product.art });
+      cart.push({ id: product.id, name: product.name, size: size, price: product.price, qty: 1, art: product.art, image: product.image });
     }
     renderCart();
   }
@@ -1049,7 +1075,7 @@
       }).join('');
 
       card.innerHTML =
-        '<div class="product-frame"><span class="flat-tag">Croquis &middot; ' + p.flat + '</span>' + p.art + '</div>' +
+        '<div class="product-frame' + (p.image ? ' has-image' : '') + '">' + productVisualHTML(p, true) + '</div>' +
         '<div class="product-info">' +
           '<span class="product-name wordmark-face">' + p.name + '<span class="sub">' + p.sub + '</span></span>' +
           '<span class="product-price">' + money(p.price) + '</span>' +
@@ -1286,8 +1312,9 @@
     opts = opts || {};
     currentProductSize = product.sizes.length === 1 ? product.sizes[0] : '';
 
-    document.getElementById('productArt').innerHTML =
-      '<span class="flat-tag">Croquis &middot; ' + product.flat + '</span>' + product.art;
+    var artEl = document.getElementById('productArt');
+    artEl.className = 'product-frame' + (product.image ? ' has-image' : '');
+    artEl.innerHTML = productVisualHTML(product, true);
     document.getElementById('productTitle').textContent = product.name;
     document.getElementById('productDetailSub').textContent = product.sub;
     document.getElementById('productDetailPrice').textContent = money(product.price);
