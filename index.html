@@ -94,6 +94,16 @@
     font-variation-settings: "opsz" 96;
   }
 
+  /* the nav (top-left) and footer (bottom-left) wordmarks render at ~16-20px —
+     small enough that opsz 96's most extreme hairline strokes (the left leg
+     of the capital M especially) thin out to near-invisible. Dialing the
+     optical size back to 60 keeps the same dramatic italic character but
+     with strokes that actually hold up at this size; verified by rendering
+     the real variable font at both settings side by side. */
+  .wordmark.wordmark-face{
+    font-variation-settings: "opsz" 60;
+  }
+
   .eyebrow{
     font-family: var(--mono);
     font-size: 0.68rem;
