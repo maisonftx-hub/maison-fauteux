@@ -1038,6 +1038,21 @@
 
   var cart = []; // { id, name, size, price, qty, art }
 
+  // Remember the cart on this device across visits (closing the tab,
+  // coming back tomorrow) — no account needed. Lives in localStorage, not
+  // sessionStorage, so it survives closing the browser entirely. Private
+  // browsing / storage blocked just means it quietly doesn't remember,
+  // rather than breaking anything.
+  (function(){
+    try {
+      var saved = localStorage.getItem('mf_cart_v1');
+      if(saved) cart = JSON.parse(saved) || [];
+    } catch(e){ cart = []; }
+  })();
+  function saveCartToStorage(){
+    try { localStorage.setItem('mf_cart_v1', JSON.stringify(cart)); } catch(e){ /* storage unavailable — cart still works, just isn't remembered */ }
+  }
+
   function money(n){ return n.toFixed(0) + " $"; }
 
   // A product shows its real photo (products.json "image") once one is
@@ -1107,6 +1122,8 @@
     if(checkoutTaxEl) checkoutTaxEl.textContent = moneyPrecise(tax);
     if(checkoutTotalEl) checkoutTotalEl.textContent = moneyPrecise(subtotal + tax);
     bagCount.textContent = count;
+
+    saveCartToStorage();
   }
 
   function addToCart(product, size){
