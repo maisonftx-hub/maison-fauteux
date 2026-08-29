@@ -867,9 +867,13 @@
       font-size: 1.05rem;
       color: var(--ink);
     }
-    /* room at the bottom of the scroll area so the last bit of content
-       (the inline button included) never sits behind the fixed bar */
-    #productView .page-view-inner{ padding-bottom: 100px; }
+    /* A fixed bar covers the same ~78px screen strip regardless of scroll
+       position — on a page this short, content can render there on the
+       very first paint (before any scrolling happens at all), so trailing
+       padding at the end of the content doesn't help. The scroll area
+       itself has to stop short of the bar instead, so nothing ever lands
+       underneath it in the first place. */
+    #productView{ bottom: 78px; }
     /* the inline button stays in the flow as a normal (non-sticky) CTA —
        redundant with the bar above once you've scrolled that far, but
        harmless, and avoids reworking the add-to-cart wiring for one button */
