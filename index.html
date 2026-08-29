@@ -848,7 +848,9 @@
      mobile-commerce pattern for a reachable purchase CTA anyway. */
   .product-mobile-bar{ display: none; }
   @media (max-width: 780px){
-    .product-mobile-bar{
+    /* only shown while the product page itself is open — same effect as
+       tying it to #productView's own open/close, without extra JS */
+    #productView.open ~ .product-mobile-bar{
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1057,11 +1059,17 @@
       </div>
     </div>
   </div>
+</div>
 
-  <div class="product-mobile-bar">
-    <span class="product-mobile-bar-price" id="productMobileBarPrice"></span>
-    <button class="btn" id="productMobileAddBtn" type="button">Ajouter au panier</button>
-  </div>
+<!-- Deliberately a sibling of #productView, not nested inside it: .page-view
+     always has a `transform` (even translateY(0) when open), which creates
+     a new containing block for any position:fixed descendant — a fixed bar
+     nested inside would end up fixed relative to that shrunk box instead of
+     the real viewport. Visibility is tied to #productView.open via the CSS
+     sibling selector below, so nothing extra needs to toggle it. -->
+<div class="product-mobile-bar">
+  <span class="product-mobile-bar-price" id="productMobileBarPrice"></span>
+  <button class="btn" id="productMobileAddBtn" type="button">Ajouter au panier</button>
 </div>
 
 <div class="page-view" id="confirmationView" aria-hidden="true">
