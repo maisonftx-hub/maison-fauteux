@@ -807,8 +807,8 @@
   }
   .product-detail .size-row{ margin-top: 28px; }
   .product-detail .btn{ width: auto; margin-top: 26px; }
-  #productAddBtn.added{ background: var(--ink); border-color: var(--ink); color: var(--ground); }
-  #productAddBtn.shake{ animation: shake 0.4s ease; }
+  #productAddBtn.added, #productMobileAddBtn.added{ background: var(--ink); border-color: var(--ink); color: var(--ground); }
+  #productAddBtn.shake, #productMobileAddBtn.shake{ animation: shake 0.4s ease; }
 
   .confirmation-inner{
     text-align: center;
@@ -838,14 +838,41 @@
     .checkout-layout{ grid-template-columns: 1fr; }
     .checkout-summary{ position: static; }
     .product-layout{ grid-template-columns: 1fr; }
-    /* keeps "Ajouter au panier" reachable in the thumb zone on a stacked
-       mobile product page instead of letting it scroll away above a long
-       description — sticks to the bottom of the scrollable page view,
-       same trick as .checkout-summary above, just anchored to the bottom */
-    .product-detail .btn{
-      position: sticky;
-      bottom: 16px;
+  }
+
+  /* A real fixed bar, not the inline button — a bottom-sticky *inline*
+     button was tried first, but on a page shorter than the viewport a
+     bottom-sticky element pins near the screen edge from the very first
+     paint, overlapping the price/subtitle text sitting right where it
+     lands. A dedicated fixed bar avoids that entirely and is the standard
+     mobile-commerce pattern for a reachable purchase CTA anyway. */
+  .product-mobile-bar{ display: none; }
+  @media (max-width: 780px){
+    .product-mobile-bar{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 5;
+      padding: 14px clamp(20px, 6vw, 40px);
+      background: var(--ground-raised-2);
+      border-top: 1px solid var(--line);
     }
+    .product-mobile-bar .btn{ width: auto; flex: none; margin: 0; }
+    .product-mobile-bar-price{
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 1.05rem;
+      color: var(--ink);
+    }
+    /* room at the bottom of the scroll area so the last bit of content
+       (the inline button included) never sits behind the fixed bar */
+    #productView .page-view-inner{ padding-bottom: 100px; }
+    /* the inline button stays in the flow as a normal (non-sticky) CTA —
+       redundant with the bar above once you've scrolled that far, but
+       harmless, and avoids reworking the add-to-cart wiring for one button */
   }
 
   @media (max-width: 900px){
@@ -1025,6 +1052,11 @@
         <button class="btn" id="productAddBtn" type="button">Ajouter au panier</button>
       </div>
     </div>
+  </div>
+
+  <div class="product-mobile-bar">
+    <span class="product-mobile-bar-price" id="productMobileBarPrice"></span>
+    <button class="btn" id="productMobileAddBtn" type="button">Ajouter au panier</button>
   </div>
 </div>
 
@@ -1482,23 +1514,35 @@
       });
     }
 
-    var addBtn = document.getElementById('productAddBtn');
-    addBtn.textContent = 'Ajouter au panier';
-    addBtn.classList.remove('added', 'shake');
-    addBtn.onclick = function(){
-      if(!currentProductSize){
-        addBtn.classList.remove('shake');
-        void addBtn.offsetWidth;
-        addBtn.classList.add('shake');
-        addBtn.textContent = 'Choisir une taille';
-        setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('shake'); }, 1000);
-        return;
-      }
-      addToCart(product, currentProductSize);
-      addBtn.textContent = 'Ajouté';
-      addBtn.classList.add('added');
-      setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('added'); }, 1100);
-    };
+    // Two buttons show this product's add-to-cart action — the inline one
+    // in the content, and (on mobile only, via CSS) a fixed bar at the
+    // bottom of the screen so it's always reachable without scrolling.
+    // Both share the exact same behaviour/state, driven from one place.
+    var addBtns = [document.getElementById('productAddBtn'), document.getElementById('productMobileAddBtn')];
+    document.getElementById('productMobileBarPrice').textContent = money(product.price);
+    addBtns.forEach(function(btn){
+      btn.textContent = 'Ajouter au panier';
+      btn.classList.remove('added', 'shake');
+      btn.onclick = function(){
+        if(!currentProductSize){
+          addBtns.forEach(function(b){
+            b.classList.remove('shake');
+            void b.offsetWidth;
+            b.classList.add('shake');
+            b.textContent = 'Choisir une taille';
+          });
+          setTimeout(function(){
+            addBtns.forEach(function(b){ b.textContent = 'Ajouter au panier'; b.classList.remove('shake'); });
+          }, 1000);
+          return;
+        }
+        addToCart(product, currentProductSize);
+        addBtns.forEach(function(b){ b.textContent = 'Ajouté'; b.classList.add('added'); });
+        setTimeout(function(){
+          addBtns.forEach(function(b){ b.textContent = 'Ajouter au panier'; b.classList.remove('added'); });
+        }, 1100);
+      };
+    });
 
     document.getElementById('productView').classList.add('open');
     document.getElementById('productView').setAttribute('aria-hidden', 'false');
