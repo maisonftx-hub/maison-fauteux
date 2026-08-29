@@ -1349,6 +1349,12 @@
     document.getElementById('checkoutView').classList.add('open');
     document.getElementById('checkoutView').setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    // BUGFIX: a "paiement annulé" notice shown once (via showCheckoutNotice,
+    // called right after this on the Stripe-cancel path) used to stay
+    // visible forever after — close checkout, add another item, reopen
+    // normally, and the stale cancellation warning was still there. Always
+    // hide it on open; the cancel-flow path re-shows it right afterward.
+    document.getElementById('checkoutNotice').style.display = 'none';
   }
   function closeCheckoutView(){
     document.getElementById('checkoutView').classList.remove('open');
@@ -1415,6 +1421,23 @@
       scrollToShop();
     });
   })();
+
+  // BUGFIX: none of the overlays (cart drawer, product page, checkout,
+  // confirmation) closed on Escape — standard behaviour for anything
+  // that looks and acts like a modal. Reuses each one's own close button
+  // rather than duplicating its cleanup logic here.
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Escape') return;
+    if(document.getElementById('productView').classList.contains('open')){
+      document.getElementById('productBack').click();
+    } else if(document.getElementById('checkoutView').classList.contains('open')){
+      document.getElementById('checkoutBack').click();
+    } else if(document.getElementById('confirmationView').classList.contains('open')){
+      document.getElementById('confirmationBack').click();
+    } else if(document.getElementById('cartDrawer').classList.contains('open')){
+      document.getElementById('cartClose').click();
+    }
+  });
 
   // ---- Product detail page (one per product, deep-linkable via #produit/id) ----
   var currentProductSize = '';
