@@ -707,6 +707,11 @@
     padding-top: clamp(110px, 14vw, 150px);
     padding-bottom: clamp(70px, 10vw, 120px);
   }
+  /* the product page shows real products, so the nav/basket should stay
+     reachable there — sits below the nav (z-index 200) instead of above
+     it like checkout/confirmation do. The existing top padding above was
+     already sized to clear a fixed nav, so nothing new needs to shift. */
+  #productView{ z-index: 150; }
   .page-back{
     display: flex;
     width: fit-content;
@@ -1499,6 +1504,13 @@
     document.getElementById('productView').setAttribute('aria-hidden', 'false');
     document.getElementById('productView').scrollTop = 0;
     document.body.style.overflow = 'hidden';
+
+    // Force the nav (and its basket) visible even if the page underneath
+    // hasn't been scrolled far enough to reveal it on its own — e.g. a
+    // product opened via a direct #produit/... link right after landing on
+    // the hero. Closing the product view calls scrollToShop() below, which
+    // naturally re-syncs this through the normal scroll listener.
+    document.getElementById('siteNav').classList.add('scrolled');
 
     if(opts.updateHash !== false){
       history.pushState({ product: product.id }, '', '#produit/' + product.id);
