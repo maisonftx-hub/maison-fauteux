@@ -21,17 +21,36 @@ function readRawBody(req) {
   });
 }
 
-async function sendOrderEmail(stripe, session) {
+// .trim() guards against the most common copy-paste mistake — a stray
+// space or newline pasted along with the address/app password, which
+// Gmail's SMTP would otherwise reject (or silently misdeliver) without an
+// obvious error pointing back to "there's whitespace in your env var".
+function gmailTransporter() {
+  const gmailUser = (process.env.GMAIL_USER || '').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').trim();
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: gmailUser, pass: gmailPass }
+  });
+  return { transporter, gmailUser };
+}
+
+// Shared order details both emails need — line items, the shipping/pickup
+// choice, the collected address, and the customer's own contact info.
+async function getOrderDetails(stripe, session) {
   const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
   const itemLines = lineItems.data
     .map((li) => '  • ' + li.description + '  ×' + li.quantity + '  —  ' + (li.amount_total / 100).toFixed(2) + ' $')
     .join('\n');
 
   let shippingLabel = 'Non spécifié';
+  let isPickup = false;
   if (session.shipping_cost && session.shipping_cost.shipping_rate) {
     try {
       const rate = await stripe.shippingRates.retrieve(session.shipping_cost.shipping_rate);
-      shippingLabel = rate.display_name + ' (' + (session.shipping_cost.amount_total / 100).toFixed(2) + ' $)';
+      isPickup = session.shipping_cost.amount_total === 0;
+      shippingLabel = rate.display_name + ' (' +
+        (session.shipping_cost.amount_total === 0 ? 'Gratuit' : (session.shipping_cost.amount_total / 100).toFixed(2) + ' $') + ')';
     } catch (e) { /* fall back to the default label above */ }
   }
 
@@ -44,47 +63,82 @@ async function sendOrderEmail(stripe, session) {
         session.shipping_details.address.postal_code
       ].filter(Boolean)
     : [];
-  const address = addressParts.length ? addressParts.join(', ') : 'Ramassage — aucune adresse fournie';
+  const address = addressParts.length ? addressParts.join(', ') : 'Non fournie';
 
-  const customer = session.customer_details || {};
+  return {
+    customer: session.customer_details || {},
+    itemLines,
+    shippingLabel,
+    isPickup,
+    address,
+    subtotal: (session.amount_subtotal / 100).toFixed(2),
+    total: (session.amount_total / 100).toFixed(2)
+  };
+}
+
+// The internal "an order came in" notification — goes to the association's
+// own inbox (same address it's sent from, since it's a self-notification).
+async function sendOrderNotificationEmail(stripe, session, details) {
+  const { transporter, gmailUser } = gmailTransporter();
 
   const body =
     'Nouvelle commande reçue !\n\n' +
-    'Client : ' + (customer.name || 'N/A') + '\n' +
-    'Courriel : ' + (customer.email || 'N/A') + '\n' +
-    'Téléphone : ' + (customer.phone || 'N/A') + '\n\n' +
-    'Articles :\n' + itemLines + '\n\n' +
-    'Sous-total : ' + (session.amount_subtotal / 100).toFixed(2) + ' $\n' +
-    'Total payé : ' + (session.amount_total / 100).toFixed(2) + ' $\n\n' +
-    'Livraison/Ramassage : ' + shippingLabel + '\n' +
-    'Adresse : ' + address + '\n\n' +
+    'Client : ' + (details.customer.name || 'N/A') + '\n' +
+    'Courriel : ' + (details.customer.email || 'N/A') + '\n' +
+    'Téléphone : ' + (details.customer.phone || 'N/A') + '\n\n' +
+    'Articles :\n' + details.itemLines + '\n\n' +
+    'Sous-total : ' + details.subtotal + ' $\n' +
+    'Total payé : ' + details.total + ' $\n\n' +
+    'Livraison/Ramassage : ' + details.shippingLabel + '\n' +
+    'Adresse : ' + details.address + '\n\n' +
     'Voir dans Stripe : https://dashboard.stripe.com/payments/' + session.payment_intent + '\n';
-
-  // .trim() guards against the most common copy-paste mistake — a stray
-  // space or newline pasted along with the address/app password, which
-  // Gmail's SMTP would otherwise reject (or silently misdeliver) without
-  // an obvious error pointing back to "there's whitespace in your env var".
-  const gmailUser = (process.env.GMAIL_USER || '').trim();
-  const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').trim();
-
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: gmailUser,
-      pass: gmailPass
-    }
-  });
 
   await transporter.sendMail({
     from: gmailUser,
     to: gmailUser,
-    subject: 'Nouvelle commande — ' + (session.amount_total / 100).toFixed(2) + ' $',
+    subject: 'Nouvelle commande — ' + details.total + ' $',
     text: body
   });
   // makes it possible to tell "sent successfully" apart from "silently
-  // never even tried" when checking `vercel logs` later — the catch block
-  // below already logs the failure case, this covers the success case
+  // never even tried" when checking `vercel logs` later
   console.log('Order notification email sent to', gmailUser, 'for session', session.id);
+}
+
+// The customer-facing confirmation — this is the email the site's own
+// "Merci." confirmation page already promises ("un courriel de
+// confirmation vous sera envoyé sous peu"), so it needs to actually exist.
+async function sendCustomerConfirmationEmail(stripe, session, details) {
+  const customerEmail = details.customer.email;
+  if (!customerEmail) {
+    console.error('No customer email on session', session.id, '— skipping customer confirmation.');
+    return;
+  }
+
+  const { transporter, gmailUser } = gmailTransporter();
+
+  const pickupNote = details.isPickup
+    ? 'Vous pourrez récupérer votre commande au Pavillon Fauteux — 57, rue Louis-Pasteur, Ottawa (Ontario) K1N 6N5 — certaines périodes seulement. Nous vous recontacterons dès qu\'elle sera prête.\n\n'
+    : 'Votre commande sera livrée à :\n' + details.address + '\n\n';
+
+  const body =
+    'Bonjour' + (details.customer.name ? ' ' + details.customer.name : '') + ',\n\n' +
+    'Merci pour votre commande chez Maison Fauteux !\n\n' +
+    'Voici votre récapitulatif :\n\n' +
+    details.itemLines + '\n\n' +
+    'Sous-total : ' + details.subtotal + ' $\n' +
+    'Livraison/Ramassage : ' + details.shippingLabel + '\n' +
+    'Total payé : ' + details.total + ' $\n\n' +
+    pickupNote +
+    'Des questions sur votre commande ? Écrivez-nous à ' + gmailUser + '.\n\n' +
+    '— Maison Fauteux';
+
+  await transporter.sendMail({
+    from: gmailUser,
+    to: customerEmail,
+    subject: 'Confirmation de votre commande — Maison Fauteux',
+    text: body
+  });
+  console.log('Customer confirmation email sent to', customerEmail, 'for session', session.id);
 }
 
 module.exports = async (req, res) => {
@@ -115,13 +169,24 @@ module.exports = async (req, res) => {
   }
 
   if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    // Each email is independent — a problem with one (e.g. a bad customer
+    // address) should never prevent the other from sending. Don't fail the
+    // webhook over an email problem either way — Stripe would keep
+    // retrying the same order forever otherwise. Log failures so they're
+    // visible in Vercel's function logs instead.
     try {
-      await sendOrderEmail(stripe, event.data.object);
+      const details = await getOrderDetails(stripe, session);
+      await Promise.allSettled([
+        sendOrderNotificationEmail(stripe, session, details).catch((err) => {
+          console.error('Failed to send order notification email:', err);
+        }),
+        sendCustomerConfirmationEmail(stripe, session, details).catch((err) => {
+          console.error('Failed to send customer confirmation email:', err);
+        })
+      ]);
     } catch (err) {
-      // Don't fail the webhook over an email problem — Stripe would keep
-      // retrying a failed order forever otherwise. Log it so it's visible
-      // in Vercel's function logs instead.
-      console.error('Failed to send order notification email:', err);
+      console.error('Failed to build order details:', err);
     }
   }
 
