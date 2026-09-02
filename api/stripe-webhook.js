@@ -84,15 +84,16 @@ function escapeHtml(str) {
 }
 
 // The customer confirmation's HTML version — inline styles throughout
-// (email clients strip <style> blocks unpredictably), a light palette
-// matching the brand's garnet accent rather than the site's dark theme,
-// since a light background reads reliably across every email client and
-// prints cleanly, unlike a dark-background email.
+// (email clients strip <style> blocks unpredictably). Light background by
+// design (reads reliably across every email client and prints cleanly,
+// unlike dark-mode email), but built from the actual Brand Kit colors —
+// Almond Cream as the card, Midnight Violet/Wine Plum for text, rather
+// than an invented light palette.
 function buildCustomerEmailHtml(details) {
-  const paper = '#faf7f5', ink = '#241318', inkSoft = '#6b4a52', line = '#e4d9d9';
-  const garnet = '#7c1f3f', garnetWash = '#f6e9ec';
-  const serif = "'Playfair Display', Georgia, 'Times New Roman', serif";
-  const sans = "Arial, Helvetica, sans-serif";
+  const paper = '#ECE1D5', ink = '#331C27', inkSoft = '#532932', line = '#d9cbc3';
+  const garnet = '#532932', garnetWash = '#ede6e3';
+  const serif = "'Source Serif 4', Georgia, 'Times New Roman', serif";
+  const sans = "Arial, Helvetica, sans-serif"; // Glacial Indifference can't reliably self-host in email clients
 
   const itemRows = details.items.map((li) => (
     '<tr>' +
@@ -119,7 +120,7 @@ function buildCustomerEmailHtml(details) {
       '</div>';
 
   return (
-    '<div style="background:#efe8e5;padding:32px 16px;font-family:' + sans + ';">' +
+    '<div style="background:#cebbb1;padding:32px 16px;font-family:' + sans + ';">' +
       '<div style="max-width:560px;margin:0 auto;background:' + paper + ';border-top:3px solid ' + garnet + ';">' +
         '<div style="padding:40px 40px 8px;text-align:center;">' +
           '<div style="font-family:' + serif + ';font-style:italic;font-weight:600;font-size:26px;color:' + ink + ';">Maison Fauteux</div>' +
@@ -162,7 +163,7 @@ function buildCustomerEmailHtml(details) {
           '</p>' +
         '</div>' +
         '<div style="background:' + ink + ';padding:18px 40px;text-align:center;">' +
-          '<span style="font-family:' + serif + ';font-style:italic;color:#ece7e3;font-size:13px;">Maison Fauteux</span>' +
+          '<span style="font-family:' + serif + ';font-style:italic;color:#ECE1D5;font-size:13px;">Maison Fauteux</span>' +
         '</div>' +
       '</div>' +
     '</div>'
