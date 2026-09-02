@@ -67,13 +67,106 @@ async function getOrderDetails(stripe, session) {
 
   return {
     customer: session.customer_details || {},
-    itemLines,
+    items: lineItems.data, // raw, for the HTML email's table
+    itemLines, // pre-formatted, for the plain-text emails
     shippingLabel,
     isPickup,
     address,
     subtotal: (session.amount_subtotal / 100).toFixed(2),
     total: (session.amount_total / 100).toFixed(2)
   };
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// The customer confirmation's HTML version — inline styles throughout
+// (email clients strip <style> blocks unpredictably), a light palette
+// matching the brand's garnet accent rather than the site's dark theme,
+// since a light background reads reliably across every email client and
+// prints cleanly, unlike a dark-background email.
+function buildCustomerEmailHtml(details) {
+  const paper = '#faf7f5', ink = '#241318', inkSoft = '#6b4a52', line = '#e4d9d9';
+  const garnet = '#7c1f3f', garnetWash = '#f6e9ec';
+  const serif = "'Playfair Display', Georgia, 'Times New Roman', serif";
+  const sans = "Arial, Helvetica, sans-serif";
+
+  const itemRows = details.items.map((li) => (
+    '<tr>' +
+      '<td style="padding:12px 0;border-bottom:1px solid ' + line + ';font-family:' + sans + ';font-size:14px;color:' + ink + ';">' +
+        escapeHtml(li.description) +
+      '</td>' +
+      '<td style="padding:12px 0;border-bottom:1px solid ' + line + ';font-family:' + sans + ';font-size:14px;color:' + inkSoft + ';text-align:center;">' +
+        '×' + li.quantity +
+      '</td>' +
+      '<td style="padding:12px 0;border-bottom:1px solid ' + line + ';font-family:' + sans + ';font-size:14px;color:' + ink + ';text-align:right;white-space:nowrap;">' +
+        (li.amount_total / 100).toFixed(2) + ' $' +
+      '</td>' +
+    '</tr>'
+  )).join('');
+
+  const pickupBox = details.isPickup
+    ? '<div style="margin-top:24px;padding:16px 20px;background:' + garnetWash + ';border-left:3px solid ' + garnet + ';">' +
+        '<p style="margin:0;font-family:' + sans + ';font-size:13px;font-weight:bold;letter-spacing:0.04em;text-transform:uppercase;color:' + garnet + ';">Ramassage</p>' +
+        '<p style="margin:6px 0 0;font-family:' + sans + ';font-size:14px;line-height:1.6;color:' + ink + ';">Pavillon Fauteux — 57, rue Louis-Pasteur, Ottawa (Ontario) K1N 6N5, certaines périodes seulement. Nous vous recontacterons dès qu\'elle sera prête.</p>' +
+      '</div>'
+    : '<div style="margin-top:24px;padding:16px 20px;background:' + garnetWash + ';border-left:3px solid ' + garnet + ';">' +
+        '<p style="margin:0;font-family:' + sans + ';font-size:13px;font-weight:bold;letter-spacing:0.04em;text-transform:uppercase;color:' + garnet + ';">Livraison</p>' +
+        '<p style="margin:6px 0 0;font-family:' + sans + ';font-size:14px;line-height:1.6;color:' + ink + ';">' + escapeHtml(details.address) + '</p>' +
+      '</div>';
+
+  return (
+    '<div style="background:#efe8e5;padding:32px 16px;font-family:' + sans + ';">' +
+      '<div style="max-width:560px;margin:0 auto;background:' + paper + ';border-top:3px solid ' + garnet + ';">' +
+        '<div style="padding:40px 40px 8px;text-align:center;">' +
+          '<div style="font-family:' + serif + ';font-style:italic;font-weight:600;font-size:26px;color:' + ink + ';">Maison Fauteux</div>' +
+        '</div>' +
+        '<div style="padding:16px 40px 40px;">' +
+          '<p style="font-family:' + sans + ';font-size:15px;color:' + ink + ';margin:0 0 4px;">' +
+            'Bonjour' + (details.customer.name ? ' ' + escapeHtml(details.customer.name) : '') + ',' +
+          '</p>' +
+          '<p style="font-family:' + sans + ';font-size:15px;color:' + inkSoft + ';line-height:1.6;margin:0 0 28px;">Merci pour votre commande chez Maison Fauteux !</p>' +
+
+          '<table role="presentation" width="100%" style="border-collapse:collapse;">' +
+            '<tr>' +
+              '<td style="padding:0 0 8px;font-family:' + sans + ';font-size:11px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + inkSoft + ';border-bottom:1px solid ' + line + ';">Article</td>' +
+              '<td style="padding:0 0 8px;font-family:' + sans + ';font-size:11px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + inkSoft + ';border-bottom:1px solid ' + line + ';text-align:center;">Qté</td>' +
+              '<td style="padding:0 0 8px;font-family:' + sans + ';font-size:11px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + inkSoft + ';border-bottom:1px solid ' + line + ';text-align:right;">Prix</td>' +
+            '</tr>' +
+            itemRows +
+          '</table>' +
+
+          '<table role="presentation" width="100%" style="border-collapse:collapse;margin-top:4px;">' +
+            '<tr>' +
+              '<td style="padding:10px 0 0;font-family:' + sans + ';font-size:13px;color:' + inkSoft + ';">Sous-total</td>' +
+              '<td style="padding:10px 0 0;font-family:' + sans + ';font-size:13px;color:' + ink + ';text-align:right;">' + details.subtotal + ' $</td>' +
+            '</tr>' +
+            '<tr>' +
+              '<td style="padding:4px 0 0;font-family:' + sans + ';font-size:13px;color:' + inkSoft + ';">Livraison/Ramassage</td>' +
+              '<td style="padding:4px 0 0;font-family:' + sans + ';font-size:13px;color:' + ink + ';text-align:right;">' + escapeHtml(details.shippingLabel) + '</td>' +
+            '</tr>' +
+            '<tr>' +
+              '<td style="padding:12px 0 0;border-top:1px solid ' + line + ';font-family:' + sans + ';font-size:15px;font-weight:bold;color:' + ink + ';">Total payé</td>' +
+              '<td style="padding:12px 0 0;border-top:1px solid ' + line + ';font-family:' + sans + ';font-size:15px;font-weight:bold;color:' + ink + ';text-align:right;">' + details.total + ' $</td>' +
+            '</tr>' +
+          '</table>' +
+
+          pickupBox +
+
+          '<p style="font-family:' + sans + ';font-size:13px;color:' + inkSoft + ';line-height:1.6;margin:32px 0 0;">' +
+            'Des questions sur votre commande&nbsp;? Écrivez-nous à ' +
+            '<a href="mailto:' + escapeHtml(details.replyTo) + '" style="color:' + garnet + ';">' + escapeHtml(details.replyTo) + '</a>.' +
+          '</p>' +
+        '</div>' +
+        '<div style="background:' + ink + ';padding:18px 40px;text-align:center;">' +
+          '<span style="font-family:' + serif + ';font-style:italic;color:#ece7e3;font-size:13px;">Maison Fauteux</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
 }
 
 // The internal "an order came in" notification — goes to the association's
@@ -132,11 +225,14 @@ async function sendCustomerConfirmationEmail(stripe, session, details) {
     'Des questions sur votre commande ? Écrivez-nous à ' + gmailUser + '.\n\n' +
     '— Maison Fauteux';
 
+  details.replyTo = gmailUser;
+
   await transporter.sendMail({
     from: gmailUser,
     to: customerEmail,
     subject: 'Confirmation de votre commande — Maison Fauteux',
-    text: body
+    text: body, // plain-text fallback for clients that don't render HTML
+    html: buildCustomerEmailHtml(details)
   });
   console.log('Customer confirmation email sent to', customerEmail, 'for session', session.id);
 }
