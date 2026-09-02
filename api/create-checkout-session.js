@@ -162,6 +162,11 @@ module.exports = async (req, res) => {
         }
       ],
       phone_number_collection: { enabled: true },
+      // Shows a real "Add promotion code" field on Stripe's own checkout
+      // page — Stripe validates and applies the discount itself, nothing
+      // custom to build or trust here. The actual codes are created in the
+      // Stripe Dashboard (Product catalog → Coupons), not in this code.
+      allow_promotion_codes: true,
       success_url: base + '?commande=succes',
       cancel_url: base + '?commande=annulee'
     });
