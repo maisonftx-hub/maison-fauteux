@@ -60,20 +60,31 @@ async function sendOrderEmail(stripe, session) {
     'Adresse : ' + address + '\n\n' +
     'Voir dans Stripe : https://dashboard.stripe.com/payments/' + session.payment_intent + '\n';
 
+  // .trim() guards against the most common copy-paste mistake — a stray
+  // space or newline pasted along with the address/app password, which
+  // Gmail's SMTP would otherwise reject (or silently misdeliver) without
+  // an obvious error pointing back to "there's whitespace in your env var".
+  const gmailUser = (process.env.GMAIL_USER || '').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').trim();
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD
+      user: gmailUser,
+      pass: gmailPass
     }
   });
 
   await transporter.sendMail({
-    from: process.env.GMAIL_USER,
-    to: process.env.GMAIL_USER,
+    from: gmailUser,
+    to: gmailUser,
     subject: 'Nouvelle commande — ' + (session.amount_total / 100).toFixed(2) + ' $',
     text: body
   });
+  // makes it possible to tell "sent successfully" apart from "silently
+  // never even tried" when checking `vercel logs` later — the catch block
+  // below already logs the failure case, this covers the success case
+  console.log('Order notification email sent to', gmailUser, 'for session', session.id);
 }
 
 module.exports = async (req, res) => {
