@@ -20,36 +20,60 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,400;1,6..96,500;1,6..96,600;1,6..96,700&family=Playfair+Display:ital,wght@1,600;1,700&family=Archivo:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,500;1,8..60,600&display=swap" rel="stylesheet">
 <style>
+  /* Glacial Indifference — the brand kit's sans-serif, not on Google Fonts,
+     so self-hosted here. Free/OFL-licensed (Hanken Design Co.) — see
+     assets/fonts/GlacialIndifference-OFL-LICENSE.txt. */
+  @font-face{
+    font-family: "Glacial Indifference";
+    src: url("assets/fonts/GlacialIndifference-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face{
+    font-family: "Glacial Indifference";
+    src: url("assets/fonts/GlacialIndifference-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face{
+    font-family: "Glacial Indifference";
+    src: url("assets/fonts/GlacialIndifference-Italic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+  }
+
   :root{
-    /* uOttawa-family garnet baked into the neutrals themselves, not just
-       the accent — every "black" here has a burgundy undertone */
-    --ground: #170c10;
-    --ground-raised: #241318;
-    --ground-raised-2: #2e181f;
-    /* warm ivory, not pure white — full-white text on a near-black ground
-       measured at 17.2:1 contrast, past the ~15.3–15.8:1 comfort ceiling
-       researchers associate with halation for readers with astigmatism */
-    --ink: #ece7e3;
-    --ink-muted: #ab929a;
-    --ink-faint: #977f88;
-    --line: #3d2129;
-    /* full palette back on the original rose/garnet hue — the whole family
-       (buttons, borders, glows, text) shares this single warmer tone again. */
-    --garnet: #7c1f3f;
-    --garnet-bright: #b33a5e;
-    --garnet-text: #cc5f7d;
+    /* Official brand palette — Maison Fauteux Brand Kit 2026-2027 */
+    --ground: #331C27;         /* Midnight Violet */
+    --ground-raised: #532932;  /* Wine Plum */
+    --ground-raised-2: #422128; /* Wine Plum, deepened — for gradients only */
+    --ink: #ECE1D5;            /* Almond Cream */
+    --ink-muted: #B69A8B;      /* Dusty Taupe */
+    --ink-faint: #8d6b59;      /* Dusty Taupe, darkened — least emphasis only */
+    --line: #542e40;           /* Midnight Violet, lightened — hairlines */
 
-    /* a quieter, more subdued step of the *same* burgundy family — for the
-       header chrome and the About section — rather than a truly neutral
-       gray, which read as a mismatched color dropped into a warm palette */
-    --muted: #120d0f;
-    --muted-raised: #1a1416;
+    /* Dusty Taupe carries the accent role — it's the only brand color with
+       real contrast against Midnight Violet (5.98:1); Wine Plum and Dark
+       Slate Grey both sit too close in value to the ground to read as a
+       button. Button text pairs with it in Midnight Violet, not Almond
+       Cream — verified by contrast math, not assumed. */
+    --garnet: #B69A8B;
+    --garnet-bright: #c6b0a4;  /* Dusty Taupe, lightened — hover state */
+    --garnet-text: #B69A8B;
 
-    --display: "Bodoni Moda", "Playfair Display", Georgia, serif;
-    --body: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    --mono: "Space Mono", ui-monospace, "SF Mono", monospace;
+    /* Dark Slate Grey — the brand kit's fifth color — as the header/About
+       chrome, quieter than the main ground rather than a true neutral. */
+    --muted: #32494E;
+    --muted-raised: #3a555a;
+
+    --display: "Source Serif 4", Georgia, serif; /* stand-in for Monterchi Serif — see README */
+    --body: "Glacial Indifference", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: var(--body); /* the brand kit specifies two typefaces total, not a third monospace one */
 
     color-scheme: dark;
   }
@@ -100,28 +124,12 @@
     color: var(--ink);
   }
 
-  /* Bodoni Moda is a variable optical-size face — at small sizes it
-     auto-selects a restrained "text" cut, which is why product names read
-     nothing like the logo's flourished display italic. Forcing the display
-     end of the opsz axis (plus a heavier weight) regardless of font-size
-     is what actually gets small text closer to the wordmark's character. */
+  /* italic + semibold Source Serif 4, used for product names, cart items,
+     and the product-page title — everywhere the brand's serif needs to
+     read a little more like a wordmark than a plain heading */
   .wordmark-face{
     font-style: italic;
     font-weight: 600;
-    font-optical-sizing: none;
-    font-variation-settings: "opsz" 96;
-  }
-
-  /* Bodoni Moda's hairline contrast is too extreme at the ~16-20px the nav
-     (top-left) and footer (bottom-left) wordmarks render at — even dialed
-     back on the opsz axis, the capital M's thin stroke stays fragile.
-     Playfair Display keeps the same dramatic serif-italic character (it's
-     the site's own fallback font) but at a bolder, non-variable cut that
-     holds up cleanly at small sizes — confirmed by rendering both side by
-     side rather than guessing. */
-  .wordmark.wordmark-face{
-    font-family: "Playfair Display", "Bodoni Moda", Georgia, serif;
-    font-variation-settings: normal;
   }
 
   .eyebrow{
@@ -163,10 +171,16 @@
     visibility: visible;
     pointer-events: auto;
     transition: opacity 0.4s ease, visibility 0s linear, background 0.35s ease, border-color 0.35s ease, padding 0.35s ease;
-    background: rgba(18,13,15,0.92);
+    background: rgba(50,73,78,0.92); /* Dark Slate Grey */
     backdrop-filter: blur(8px);
     border-bottom-color: var(--line);
     padding: 16px 0;
+    /* Dusty Taupe's usual 5.98:1 contrast is measured against Midnight
+       Violet — against this lighter Dark Slate Grey chrome it drops to
+       3.63:1, short of AA for the nav links' ~13px text. Brightening it
+       (the same tint already used for button hover) restores 4.62:1. */
+    --ink-muted: var(--garnet-bright);
+    --garnet-text: var(--garnet-bright);
   }
   .nav .wrap{
     display: flex;
@@ -174,13 +188,13 @@
     justify-content: space-between;
     gap: 24px;
   }
-  .wordmark{
-    font-family: var(--display);
-    font-size: 1.3rem;
-    text-decoration: none;
-    color: var(--ink);
-    letter-spacing: 0.01em;
-  }
+  /* nav/footer use the real logo lockup (script "Maison" + serif "FAUTEUX")
+     as an image now, rather than reproducing it in live text — that script
+     face isn't a system-wide typeface choice, it's bespoke to the mark
+     itself, and no font substitution would actually match it. */
+  .wordmark-link{ display: inline-flex; align-items: center; }
+  .wordmark-img{ display: block; height: 34px; width: auto; }
+  .footer-wordmark-img{ height: 26px; }
   nav.links{
     display: flex;
     align-items: center;
@@ -231,7 +245,9 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     text-decoration: none;
-    color: var(--ink);
+    /* --garnet (Dusty Taupe) is a light color, not a dark one — button text
+       needs to be dark against it, not the usual light --ink */
+    color: var(--ground);
     background: var(--garnet);
     padding: 14px 24px;
     border: 1px solid var(--garnet);
@@ -274,7 +290,7 @@
     content: "";
     position: absolute;
     inset: -10%;
-    background: radial-gradient(45% 45% at 50% 55%, rgba(124,31,63,0.38), transparent 70%);
+    background: radial-gradient(45% 45% at 50% 55%, rgba(83,41,50,0.45), transparent 70%);
     pointer-events: none;
   }
   .hero-pin-wrap.static .hero-pin{
@@ -290,7 +306,12 @@
   }
   .hero-logo{
     max-width: min(760px, 82vw);
-    width: 100%;
+    /* the real logo (script + serif + tagline stacked) is noticeably
+       taller relative to its width than the old placeholder wordmark was —
+       capping height too keeps it from ever exceeding the pinned 100vh
+       hero on short/wide screens, where overflow is hidden */
+    max-height: 62vh;
+    width: auto;
     height: auto;
     margin-inline: auto;
   }
@@ -484,7 +505,14 @@
   }
 
   /* ---------- About ---------- */
-  .about-section{ padding: clamp(70px, 10vw, 120px) 0; background: var(--muted-raised); }
+  .about-section{
+    padding: clamp(70px, 10vw, 120px) 0;
+    background: var(--muted-raised);
+    /* same contrast fix as header.nav.scrolled — this section sits on the
+       lighter Dark Slate Grey chrome, not the main Midnight Violet ground */
+    --ink-muted: var(--garnet-bright);
+    --garnet-text: var(--garnet-bright);
+  }
   .about{
     display: grid;
     grid-template-columns: 0.8fr 1.2fr;
@@ -674,7 +702,7 @@
   /* the "Commander" CTA gets its own truer red-burgundy (uOttawa garnet
      territory — red-dominant, no blue-above-green pink tilt) rather than
      the site's rose-leaning accent, since this is the actual purchase button */
-  .cart-checkout{ background: #8a1c2c; border-color: #8a1c2c; }
+  .cart-checkout{ background: #8a1c2c; border-color: #8a1c2c; color: var(--ink); } /* dark red bg needs light text, unlike the base .btn's light taupe */
   .cart-checkout:hover{ background: #a8283a; border-color: #a8283a; }
   .cart-checkout.done{ background: var(--ink); border-color: var(--ink); color: var(--ground); }
   .cart-note{
@@ -690,7 +718,7 @@
     inset: 0;
     z-index: 400;
     background:
-      radial-gradient(60% 40% at 50% 0%, rgba(124,31,63,0.30), transparent 70%),
+      radial-gradient(60% 40% at 50% 0%, rgba(83,41,50,0.35), transparent 70%),
       var(--ground);
     overflow-y: auto;
     opacity: 0;
@@ -909,7 +937,7 @@
 
 <header class="nav" id="siteNav">
   <div class="wrap">
-    <a href="#" class="wordmark wordmark-face">Maison Fauteux</a>
+    <a href="#" class="wordmark-link"><img src="assets/logo-compact-white.png" alt="Maison Fauteux" class="wordmark-img"></a>
     <nav class="links">
       <a class="link-item" href="#shop">Boutique</a>
       <a class="link-item" href="#about">À propos</a>
@@ -980,7 +1008,7 @@
 
 <footer>
   <div class="wrap">
-    <a href="#" class="wordmark wordmark-face" style="font-size:1rem;">Maison Fauteux</a>
+    <a href="#" class="wordmark-link footer-wordmark-link"><img src="assets/logo-compact-white.png" alt="Maison Fauteux" class="wordmark-img footer-wordmark-img"></a>
     <span class="fine">FONDÉE EN 2026 &middot; PIÈCES FAITES SUR COMMANDE</span>
   </div>
   <div class="wrap footer-contact">
