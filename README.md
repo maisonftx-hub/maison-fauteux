@@ -32,6 +32,26 @@ See `STRIPE_SETUP.md` in the parent project folder for the full walkthrough
 (in French) — creating the Stripe account, inviting team members, and
 adding `STRIPE_SECRET_KEY` to this project's Vercel Environment Variables.
 
+## Brand Kit compliance
+
+The site follows the official *Maison Fauteux Brand Kit 2026-2027*:
+
+- **Colors** — the exact 5 hex values (Midnight Violet, Wine Plum, Dusty
+  Taupe, Almond Cream, Dark Slate Grey) drive every CSS color token in
+  `index.html`'s `:root` block and the confirmation email.
+- **Logo** — `assets/logo-white.png` (hero) and `assets/logo-compact-white.png`
+  (nav/footer) are extracted directly from the brand kit's own logo artwork,
+  not reproduced in live text — the script "Maison" is bespoke lettering,
+  not a system font.
+- **Typography** — `Glacial Indifference` (the kit's sans-serif) is
+  self-hosted under `assets/fonts/` (free, OFL-licensed). **`Monterchi
+  Serif`** (the kit's heading serif) is a **paid commercial font from
+  Zetafonts** ($45–240 one-time, zetafonts.com/monterchi) — not licensed
+  yet, so `Source Serif 4` (Google Fonts, free) stands in for it via the
+  `--display` token. Once Monterchi is purchased, swap the `--display`
+  font stack and add the real `@font-face` files the same way Glacial
+  Indifference is set up.
+
 ## Local development
 
 This is a plain static site plus one serverless function — no build step.
