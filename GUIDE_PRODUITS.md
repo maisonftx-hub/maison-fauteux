@@ -87,6 +87,49 @@ photo soit ajoutée. Pour en ajouter une :
 
 Pour revenir au croquis, remettez simplement `"image": null`.
 
+## Gérer l'inventaire (stock disponible par taille)
+
+Contrairement au reste (`products.json`, sur GitHub), le stock vit dans une
+base de données séparée — **Supabase** — puisqu'il change à chaque vente et
+doit être mis à jour en temps réel, pas seulement quand quelqu'un modifie du
+code.
+
+### Consulter ou changer une quantité
+
+1. Allez sur https://supabase.com, connectez-vous avec `maisonftx@gmail.com`
+2. Ouvrez le projet, puis **Table Editor** (menu de gauche) → table
+   **`product_stock`**
+3. Vous verrez une grille, comme un tableur : `product_id | size | quantity`
+   — une ligne par taille de chaque produit
+4. **Pour réapprovisionner** : cliquez sur la cellule `quantity` de la bonne
+   ligne, changez le nombre, appuyez sur Entrée. C'est enregistré
+   immédiatement — le site affiche le nouveau chiffre à son prochain
+   chargement, rien d'autre à faire.
+
+### Ajouter le stock d'un nouveau produit
+
+Quand vous ajoutez un produit dans `products.json` (voir plus haut), il
+n'est pas suivi en stock tant que vous n'ajoutez pas ses lignes ici :
+
+1. Dans la même table, cliquez **Insert → Insert row**
+2. Remplissez `product_id` (doit correspondre **exactement** au `id` utilisé
+   dans `products.json`), `size` (doit correspondre **exactement** à une des
+   tailles de ce produit), et `quantity`
+3. Répétez une fois par taille — un produit à 4 tailles = 4 lignes
+
+**Aucun risque à l'oublier** : un produit/taille sans ligne dans cette table
+est simplement considéré toujours disponible (comme avant l'existence de
+cette fonctionnalité) — rien ne casse, ça veut juste dire que cet article
+n'affichera pas encore "épuisé" quand il le sera vraiment.
+
+### Ce qui est automatique
+
+- Une taille à zéro s'affiche barrée et non cliquable sur le site, et le
+  paiement refuse la vente si quelqu'un essaie quand même.
+- Vous recevez un ⚠️ dans le courriel de notification de commande habituel
+  dès qu'un article tombe à 3 unités ou moins — pas de tableau de bord
+  séparé à surveiller.
+
 ## Le piège à éviter
 
 `products.json` est du texte strict — une virgule manquante ou en trop, ou
