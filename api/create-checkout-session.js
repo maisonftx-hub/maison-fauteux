@@ -14,6 +14,10 @@ const PRODUCTS = require('../products.json');
 
 const ALLOWED_ORIGINS = [
   'https://maisonftx-hub.github.io',
+  // the custom domain, once DNS is pointed at GitHub Pages — kept here
+  // ahead of time so nothing needs redeploying the moment it goes live
+  'https://maisonfauteux.ca',
+  'https://www.maisonfauteux.ca',
   'http://localhost:3000',
   'http://localhost:5000'
 ];
