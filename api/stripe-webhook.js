@@ -2,11 +2,13 @@
 // finishes, so the association gets an email the moment an order comes in
 // instead of having to remember to check the Stripe Dashboard.
 //
-// Requires three environment variables in Vercel (Settings → Environment
+// Requires these environment variables in Vercel (Settings → Environment
 // Variables), in addition to STRIPE_SECRET_KEY:
-//   STRIPE_WEBHOOK_SECRET  — from Stripe Dashboard → Developers → Webhooks
-//   GMAIL_USER             — the Gmail address notifications are sent from/to
-//   GMAIL_APP_PASSWORD     — a Gmail "App Password" (not the normal password)
+//   STRIPE_WEBHOOK_SECRET      — from Stripe Dashboard → Developers → Webhooks
+//   GMAIL_USER                 — the Gmail address notifications are sent from/to
+//   GMAIL_APP_PASSWORD         — a Gmail "App Password" (not the normal password)
+//   SUPABASE_URL               — optional; inventory tracking is skipped without it
+//   SUPABASE_SERVICE_ROLE_KEY  — optional; the *secret* key, never the public one
 // See ../STRIPE_SETUP.md for the one-time setup steps for all of these.
 
 const Stripe = require('stripe');
@@ -169,17 +171,67 @@ function buildCustomerEmailHtml(details) {
   );
 }
 
+// Called once payment has actually succeeded — atomically decrements
+// stock for each item via the decrement_stock() Postgres function (see
+// STRIPE_SETUP.md), which refuses to go below zero even under concurrent
+// orders. Returns which items are now low, for the notification email.
+const LOW_STOCK_THRESHOLD = 3;
+
+async function decrementStock(cartItems) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // Inventory tracking isn't set up yet — nothing to decrement.
+    return [];
+  }
+
+  const results = [];
+  for (const item of cartItems) {
+    try {
+      const res = await fetch(process.env.SUPABASE_URL + '/rest/v1/rpc/decrement_stock', {
+        method: 'POST',
+        headers: {
+          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: 'Bearer ' + process.env.SUPABASE_SERVICE_ROLE_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ p_product_id: item.id, p_size: item.size, p_qty: item.qty })
+      });
+      if (!res.ok) {
+        console.error('Stock decrement request failed for', item.id, item.size, res.status, await res.text());
+        continue;
+      }
+      const rows = await res.json();
+      if (!rows.length) {
+        // The function's own guard (quantity >= p_qty) rejected it — stock
+        // ran out between the pre-payment check and payment completing.
+        // Rare, but not something to silently lose track of.
+        console.error('Stock decrement guard rejected (already sold out) for', item.id, item.size);
+        continue;
+      }
+      results.push({ id: item.id, size: item.size, remaining: rows[0].new_quantity });
+    } catch (err) {
+      console.error('Stock decrement error for', item.id, item.size, err);
+    }
+  }
+  return results;
+}
+
 // The internal "an order came in" notification — goes to the association's
 // own inbox (same address it's sent from, since it's a self-notification).
-async function sendOrderNotificationEmail(stripe, session, details) {
+async function sendOrderNotificationEmail(stripe, session, details, stockResults) {
   const { transporter, gmailUser } = gmailTransporter();
+
+  const lowStock = (stockResults || []).filter((r) => r.remaining <= LOW_STOCK_THRESHOLD);
+  const lowStockNote = lowStock.length
+    ? '\n⚠️ Stock bas — ' + lowStock.map((r) => r.id + ' (' + r.size + ') : ' + r.remaining + ' restant(s)').join(', ') + '\n'
+    : '';
 
   const body =
     'Nouvelle commande reçue !\n\n' +
     'Client : ' + (details.customer.name || 'N/A') + '\n' +
     'Courriel : ' + (details.customer.email || 'N/A') + '\n' +
     'Téléphone : ' + (details.customer.phone || 'N/A') + '\n\n' +
-    'Articles :\n' + details.itemLines + '\n\n' +
+    'Articles :\n' + details.itemLines + '\n' +
+    lowStockNote + '\n' +
     'Sous-total : ' + details.subtotal + ' $\n' +
     'Total payé : ' + details.total + ' $\n\n' +
     'Livraison/Ramassage : ' + details.shippingLabel + '\n' +
@@ -189,7 +241,7 @@ async function sendOrderNotificationEmail(stripe, session, details) {
   await transporter.sendMail({
     from: gmailUser,
     to: gmailUser,
-    subject: 'Nouvelle commande — ' + details.total + ' $',
+    subject: (lowStock.length ? '⚠️ ' : '') + 'Nouvelle commande — ' + details.total + ' $',
     text: body
   });
   // makes it possible to tell "sent successfully" apart from "silently
@@ -273,8 +325,20 @@ module.exports = async (req, res) => {
     // visible in Vercel's function logs instead.
     try {
       const details = await getOrderDetails(stripe, session);
+
+      let cart = [];
+      try {
+        cart = JSON.parse((session.metadata && session.metadata.cart) || '[]');
+      } catch (err) {
+        console.error('Could not parse session.metadata.cart:', err);
+      }
+      const stockResults = await decrementStock(cart).catch((err) => {
+        console.error('Stock decrement step failed entirely:', err);
+        return [];
+      });
+
       await Promise.allSettled([
-        sendOrderNotificationEmail(stripe, session, details).catch((err) => {
+        sendOrderNotificationEmail(stripe, session, details, stockResults).catch((err) => {
           console.error('Failed to send order notification email:', err);
         }),
         sendCustomerConfirmationEmail(stripe, session, details).catch((err) => {

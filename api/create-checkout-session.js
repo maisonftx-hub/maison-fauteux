@@ -47,6 +47,53 @@ function computeShippingCents(items) {
   return Math.min(amount, SHIPPING.capCents);
 }
 
+// Checked here (before payment) so a sold-out item fails fast with a clear
+// message, rather than after the customer has already gone through
+// Stripe's payment page. Stock only actually gets *decremented* once
+// payment succeeds — see the decrementStock() call in stripe-webhook.js —
+// this function only reads, never writes.
+async function checkStock(items) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // Inventory tracking isn't configured yet — don't block checkout over
+    // a feature that hasn't been set up, just skip the check.
+    return { ok: true };
+  }
+
+  const orFilter = items
+    .map((item) => 'and(product_id.eq.' + encodeURIComponent(item.id) + ',size.eq.' + encodeURIComponent(item.size) + ')')
+    .join(',');
+
+  const res = await fetch(
+    process.env.SUPABASE_URL + '/rest/v1/product_stock?select=product_id,size,quantity&or=(' + orFilter + ')',
+    {
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: 'Bearer ' + process.env.SUPABASE_SERVICE_ROLE_KEY
+      }
+    }
+  );
+  if (!res.ok) {
+    // Supabase itself is unreachable/misconfigured — fail open rather than
+    // blocking every sale over an inventory-tracking outage.
+    console.error('Stock check failed:', res.status, await res.text());
+    return { ok: true };
+  }
+  const rows = await res.json();
+
+  const stockByKey = {};
+  rows.forEach((row) => { stockByKey[row.product_id + ':' + row.size] = row.quantity; });
+
+  for (const item of items) {
+    const qty = Math.max(1, Math.min(20, parseInt(item.qty, 10) || 1));
+    const available = stockByKey[item.id + ':' + item.size];
+    // no row at all for that product/size = not tracked, don't block it
+    if (available !== undefined && available < qty) {
+      return { ok: false, id: item.id, size: item.size, available };
+    }
+  }
+  return { ok: true };
+}
+
 // Stripe requires an existing Tax Rate object id on each line item (there's
 // no way to pass a bare percentage inline) — find the one we've already
 // created, or create it once. No manual Dashboard step needed either way.
@@ -102,6 +149,19 @@ module.exports = async (req, res) => {
       return;
     }
 
+    const stock = await checkStock(items);
+    if (!stock.ok) {
+      const product = PRODUCTS.find((p) => p.id === stock.id);
+      const name = product ? product.name : stock.id;
+      res.status(409).json({
+        error: stock.available > 0
+          ? name + ' — taille ' + stock.size + ' : il n\'en reste que ' + stock.available + '.'
+          : name + ' — taille ' + stock.size + ' est épuisé.',
+        outOfStock: { id: stock.id, size: stock.size, available: stock.available }
+      });
+      return;
+    }
+
     // Re-derive line items server-side from products.json rather than
     // trusting client-sent prices — never trust a price the browser sends.
     // This is the same file the storefront reads its catalog from, so a
@@ -138,9 +198,19 @@ module.exports = async (req, res) => {
     // back after Stripe lands on the actual site, not the bare domain.
     const base = origin + (typeof returnPath === 'string' ? returnPath : '/');
 
+    // Carries the exact product/size/quantity through to the webhook, so
+    // stock can be decremented for the right rows once payment succeeds —
+    // the webhook only sees Stripe's own session data, not our request body.
+    const cartForMetadata = items.map((item) => ({
+      id: item.id,
+      size: item.size,
+      qty: Math.max(1, Math.min(20, parseInt(item.qty, 10) || 1))
+    }));
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items,
+      metadata: { cart: JSON.stringify(cartForMetadata) },
       shipping_address_collection: { allowed_countries: ['CA'] },
       // Two options shown on Stripe's own page — free pickup at the
       // faculty, or shipping at a fee that scales with order size (see

@@ -455,6 +455,17 @@
   }
   .size-btn:hover{ border-color: var(--ink-muted); color: var(--ink); }
   .size-btn.active{ border-color: var(--ink); color: var(--ink); }
+  .size-btn.sold-out{
+    color: var(--ink-faint);
+    text-decoration: line-through;
+    cursor: not-allowed;
+  }
+  .size-btn.sold-out:hover{ border-color: var(--line); color: var(--ink-faint); }
+  .product-add:disabled, .btn:disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .product-add:disabled:hover{ border-color: var(--line); }
 
   .product-add{
     margin-top: 14px;
@@ -1090,6 +1101,39 @@
   // ever changes.
   var CHECKOUT_API_URL = 'https://maison-fauteux-nine.vercel.app/api/create-checkout-session';
 
+  // Inventory tracking (Supabase). This key is the "publishable" one —
+  // safe to ship in client code by design, read-only by database policy
+  // (see STRIPE_SETUP.md). Actual stock changes only ever happen server-side,
+  // with a separate secret key checkout never sees.
+  var SUPABASE_URL = 'https://cvbsfuztsxqprbygthpk.supabase.co';
+  var SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_FC5344GOK9yLA9C64gZLMg_uG4bJFIC';
+  var STOCK = {}; // "productId:size" -> quantity; a size with no entry here is treated as always available
+
+  function fetchStock(){
+    return fetch(SUPABASE_URL + '/rest/v1/product_stock?select=product_id,size,quantity', {
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: 'Bearer ' + SUPABASE_PUBLISHABLE_KEY
+      }
+    })
+      .then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(rows){
+        rows.forEach(function(row){ STOCK[row.product_id + ':' + row.size] = row.quantity; });
+      })
+      .catch(function(err){
+        // inventory tracking is a nice-to-have, not core to the shop — a
+        // failed fetch here shouldn't stop the site from working, sizes
+        // just show as available (same fail-open behaviour as the server)
+        console.error('Impossible de charger l\'inventaire :', err);
+      });
+  }
+
+  function isSizeAvailable(productId, size){
+    var key = productId + ':' + size;
+    if(!(key in STOCK)) return true;
+    return STOCK[key] > 0;
+  }
+
   // The site must always open on the hero, full stop — never mid-scroll,
   // and never a visible scroll animation either. The <head> script (very
   // top of the document) already strips a stray #shop/#about and sets
@@ -1237,10 +1281,14 @@
       var card = document.createElement('div');
       card.className = 'product-card';
       var singleSize = p.sizes.length === 1;
-      card.dataset.selectedSize = singleSize ? p.sizes[0] : '';
+      var allSoldOut = p.sizes.every(function(s){ return !isSizeAvailable(p.id, s); });
+      var defaultSize = (singleSize && isSizeAvailable(p.id, p.sizes[0])) ? p.sizes[0] : '';
+      card.dataset.selectedSize = defaultSize;
 
       var sizeButtons = p.sizes.map(function(s){
-        return '<button type="button" class="size-btn' + (singleSize ? ' active' : '') + '" data-size="' + s + '">' + s + '</button>';
+        var available = isSizeAvailable(p.id, s);
+        var cls = 'size-btn' + (s === defaultSize ? ' active' : '') + (available ? '' : ' sold-out');
+        return '<button type="button" class="' + cls + '" data-size="' + s + '"' + (available ? '' : ' disabled') + '>' + s + '</button>';
       }).join('');
 
       card.innerHTML =
@@ -1250,10 +1298,10 @@
           '<span class="product-price">' + money(p.price) + '</span>' +
         '</div>' +
         '<div class="size-row">' + sizeButtons + '</div>' +
-        '<button class="product-add" type="button">Ajouter au panier</button>';
+        '<button class="product-add" type="button"' + (allSoldOut ? ' disabled' : '') + '>' + (allSoldOut ? 'Épuisé' : 'Ajouter au panier') + '</button>';
 
       if(!singleSize){
-        card.querySelectorAll('.size-btn').forEach(function(btn){
+        card.querySelectorAll('.size-btn:not(.sold-out)').forEach(function(btn){
           btn.addEventListener('click', function(e){
             e.stopPropagation(); // quick-add on the card, not a click-through to the product page
             card.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -1264,22 +1312,24 @@
       }
 
       var addBtn = card.querySelector('.product-add');
-      addBtn.addEventListener('click', function(e){
-        e.stopPropagation();
-        var size = card.dataset.selectedSize;
-        if(!size){
-          addBtn.classList.remove('shake');
-          void addBtn.offsetWidth;
-          addBtn.classList.add('shake');
-          addBtn.textContent = 'Choisir une taille';
-          setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('shake'); }, 1000);
-          return;
-        }
-        addToCart(p, size);
-        addBtn.textContent = 'Ajouté';
-        addBtn.classList.add('added');
-        setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('added'); }, 1100);
-      });
+      if(!allSoldOut){
+        addBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          var size = card.dataset.selectedSize;
+          if(!size || !isSizeAvailable(p.id, size)){
+            addBtn.classList.remove('shake');
+            void addBtn.offsetWidth;
+            addBtn.classList.add('shake');
+            addBtn.textContent = size ? 'Cette taille est épuisée' : 'Choisir une taille';
+            setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('shake'); }, 1400);
+            return;
+          }
+          addToCart(p, size);
+          addBtn.textContent = 'Ajouté';
+          addBtn.classList.add('added');
+          setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('added'); }, 1100);
+        });
+      }
 
       // clicking the card itself (image, name, price — anywhere but the
       // size/add controls above) opens the full product page
@@ -1339,10 +1389,17 @@
     }
   }
 
-  fetch('products.json')
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      PRODUCTS = data;
+  // Stock isn't allowed to block the shop from loading — if Supabase is
+  // slow/unreachable, fetchStock() already resolves (not rejects) after
+  // logging the problem, so Promise.all still proceeds with STOCK empty
+  // (meaning every size just shows as available, the same as before this
+  // feature existed).
+  Promise.all([
+    fetch('products.json').then(function(r){ return r.json(); }),
+    fetchStock()
+  ])
+    .then(function(results){
+      PRODUCTS = results[0];
       COLLECTIONS.basics.products = PRODUCTS;
       initShop();
     })
@@ -1444,13 +1501,20 @@
           returnPath: window.location.pathname
         })
       })
-        .then(function(r){ return r.json(); })
-        .then(function(data){
-          if(data.url){
-            window.location.href = data.url;
-          } else {
-            throw new Error(data.error || 'Erreur inconnue');
+        .then(function(r){ return r.json().then(function(data){ return { status: r.status, data: data }; }); })
+        .then(function(result){
+          if(result.data.url){
+            window.location.href = result.data.url;
+            return;
           }
+          // A 409 means a size sold out between adding it to the cart and
+          // paying — show the real message (which size, how many left)
+          // rather than a generic error, since "try again" alone wouldn't
+          // explain why it keeps failing.
+          if(result.status === 409 && result.data.outOfStock){
+            showCheckoutNotice(result.data.error);
+          }
+          throw new Error(result.data.error || 'Erreur inconnue');
         })
         .catch(function(err){
           console.error(err);
@@ -1502,7 +1566,9 @@
 
   function openProductView(product, opts){
     opts = opts || {};
-    currentProductSize = product.sizes.length === 1 ? product.sizes[0] : '';
+    var singleSize = product.sizes.length === 1;
+    var allSoldOut = product.sizes.every(function(s){ return !isSizeAvailable(product.id, s); });
+    currentProductSize = (singleSize && isSizeAvailable(product.id, product.sizes[0])) ? product.sizes[0] : '';
 
     var artEl = document.getElementById('productArt');
     artEl.className = 'product-frame' + (product.image ? ' has-image' : '');
@@ -1513,12 +1579,13 @@
     document.getElementById('productDetailDesc').textContent = product.desc || '';
 
     var sizeRow = document.getElementById('productSizeRow');
-    var singleSize = product.sizes.length === 1;
     sizeRow.innerHTML = product.sizes.map(function(s){
-      return '<button type="button" class="size-btn' + (singleSize ? ' active' : '') + '" data-size="' + s + '">' + s + '</button>';
+      var available = isSizeAvailable(product.id, s);
+      var cls = 'size-btn' + (s === currentProductSize ? ' active' : '') + (available ? '' : ' sold-out');
+      return '<button type="button" class="' + cls + '" data-size="' + s + '"' + (available ? '' : ' disabled') + '>' + s + '</button>';
     }).join('');
     if(!singleSize){
-      sizeRow.querySelectorAll('.size-btn').forEach(function(btn){
+      sizeRow.querySelectorAll('.size-btn:not(.sold-out)').forEach(function(btn){
         btn.addEventListener('click', function(){
           sizeRow.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
           btn.classList.add('active');
@@ -1534,19 +1601,21 @@
     var addBtns = [document.getElementById('productAddBtn'), document.getElementById('productMobileAddBtn')];
     document.getElementById('productMobileBarPrice').textContent = money(product.price);
     addBtns.forEach(function(btn){
-      btn.textContent = 'Ajouter au panier';
+      btn.textContent = allSoldOut ? 'Épuisé' : 'Ajouter au panier';
+      btn.disabled = allSoldOut;
       btn.classList.remove('added', 'shake');
+      if(allSoldOut){ btn.onclick = null; return; }
       btn.onclick = function(){
-        if(!currentProductSize){
+        if(!currentProductSize || !isSizeAvailable(product.id, currentProductSize)){
           addBtns.forEach(function(b){
             b.classList.remove('shake');
             void b.offsetWidth;
             b.classList.add('shake');
-            b.textContent = 'Choisir une taille';
+            b.textContent = currentProductSize ? 'Cette taille est épuisée' : 'Choisir une taille';
           });
           setTimeout(function(){
             addBtns.forEach(function(b){ b.textContent = 'Ajouter au panier'; b.classList.remove('shake'); });
-          }, 1000);
+          }, 1400);
           return;
         }
         addToCart(product, currentProductSize);
