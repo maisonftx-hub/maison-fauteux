@@ -436,6 +436,40 @@
     flex: none;
   }
 
+  .color-row{
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .color-swatch{
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    padding: 0;
+    cursor: pointer;
+    box-shadow: 0 0 0 2px transparent;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .color-swatch:hover{ transform: scale(1.08); }
+  .color-swatch.active{ box-shadow: 0 0 0 2px var(--ground), 0 0 0 3px var(--ink-muted); }
+  .color-row .color-label{
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+  }
+  .color-disclaimer{
+    font-family: var(--body);
+    font-style: italic;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    margin-top: 12px;
+    max-width: 46ch;
+  }
+
   .size-row{
     display: flex;
     flex-wrap: wrap;
@@ -908,6 +942,7 @@
     .product-name{ font-size: 0.74rem; line-height: 1.25; }
     .product-name .sub{ display: none; }
     .product-price{ font-size: 0.68rem; color: var(--ink-muted); }
+    .product-card .color-row,
     .product-card .size-row,
     .product-card .product-add{ display: none; }
 
@@ -1065,7 +1100,9 @@
         <p class="product-detail-price" id="productDetailPrice"></p>
         <p class="product-detail-desc" id="productDetailDesc"></p>
 
+        <div class="color-row" id="productColorRow"></div>
         <div class="size-row" id="productSizeRow"></div>
+        <p class="color-disclaimer" id="productColorDisclaimer" style="display:none;">Les couleurs affichées peuvent différer légèrement du produit réel — la teinte restera toutefois similaire.</p>
 
         <button class="btn" id="productAddBtn" type="button">Ajouter au panier</button>
       </div>
@@ -1107,10 +1144,10 @@
   // with a separate secret key checkout never sees.
   var SUPABASE_URL = 'https://cvbsfuztsxqprbygthpk.supabase.co';
   var SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_FC5344GOK9yLA9C64gZLMg_uG4bJFIC';
-  var STOCK = {}; // "productId:size" -> quantity; a size with no entry here is treated as always available
+  var STOCK = {}; // "productId:colorId:size" -> quantity; a combo with no entry here is treated as always available
 
   function fetchStock(){
-    return fetch(SUPABASE_URL + '/rest/v1/product_stock?select=product_id,size,quantity', {
+    return fetch(SUPABASE_URL + '/rest/v1/product_stock?select=product_id,color,size,quantity', {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
         Authorization: 'Bearer ' + SUPABASE_PUBLISHABLE_KEY
@@ -1118,7 +1155,7 @@
     })
       .then(function(r){ return r.ok ? r.json() : []; })
       .then(function(rows){
-        rows.forEach(function(row){ STOCK[row.product_id + ':' + row.size] = row.quantity; });
+        rows.forEach(function(row){ STOCK[row.product_id + ':' + (row.color || '') + ':' + row.size] = row.quantity; });
       })
       .catch(function(err){
         // inventory tracking is a nice-to-have, not core to the shop — a
@@ -1128,10 +1165,18 @@
       });
   }
 
-  function isSizeAvailable(productId, size){
-    var key = productId + ':' + size;
+  function isSizeAvailable(productId, colorId, size){
+    var key = productId + ':' + (colorId || '') + ':' + size;
     if(!(key in STOCK)) return true;
     return STOCK[key] > 0;
+  }
+
+  // A product's colors are its actual variants (same product, different
+  // fabric colorway) — not separate catalog entries. Falls back to the
+  // product's first color, or null for a product with none at all.
+  function getColorObj(p, colorId){
+    if(!p.colors || !p.colors.length) return null;
+    return p.colors.find(function(c){ return c.id === colorId; }) || p.colors[0];
   }
 
   // The site must always open on the hero, full stop — never mid-scroll,
@@ -1183,13 +1228,16 @@
 
   function money(n){ return n.toFixed(0) + " $"; }
 
-  // A product shows its real photo (products.json "image") once one is
-  // set; until then it falls back to the placeholder line-art sketch.
-  function productVisualHTML(p, showFlatTag){
-    var visual = p.image
-      ? '<img src="' + p.image + '" alt="' + p.name + '" loading="lazy">'
+  // A product shows its real photo (a color's "image", or the legacy
+  // top-level products.json "image") once one is set; until then it falls
+  // back to the placeholder line-art sketch.
+  function productVisualHTML(p, showFlatTag, colorId){
+    var colorObj = getColorObj(p, colorId);
+    var image = colorObj ? colorObj.image : p.image;
+    var visual = image
+      ? '<img src="' + image + '" alt="' + p.name + '" loading="lazy">'
       : p.art;
-    var tag = (showFlatTag && !p.image)
+    var tag = (showFlatTag && !image)
       ? '<span class="flat-tag">Croquis &middot; ' + p.flat + '</span>'
       : '';
     return tag + visual;
@@ -1199,12 +1247,13 @@
     var thumb = item.image
       ? '<img src="' + item.image + '" alt="' + item.name + '" loading="lazy">'
       : item.art;
+    var meta = 'Taille ' + item.size + (item.colorLabel ? ' &middot; ' + item.colorLabel : '');
     return (
       '<div class="cart-item" data-index="' + i + '">' +
         '<div class="cart-item-thumb">' + thumb + '</div>' +
         '<div>' +
           '<div class="cart-item-name wordmark-face">' + item.name + '</div>' +
-          '<div class="cart-item-meta">Taille ' + item.size + '</div>' +
+          '<div class="cart-item-meta">' + meta + '</div>' +
           '<div class="cart-item-qty">' +
             '<button class="qty-btn" data-action="dec" data-index="' + i + '" aria-label="Diminuer la quantité">&minus;</button>' +
             '<span>' + item.qty + '</span>' +
@@ -1254,12 +1303,23 @@
     saveCartToStorage();
   }
 
-  function addToCart(product, size){
-    var existing = cart.find(function(i){ return i.id === product.id && i.size === size; });
+  function addToCart(product, size, colorId){
+    var colorObj = getColorObj(product, colorId);
+    var existing = cart.find(function(i){ return i.id === product.id && i.size === size && i.color === (colorObj ? colorObj.id : null); });
     if(existing){
       existing.qty += 1;
     } else {
-      cart.push({ id: product.id, name: product.name, size: size, price: product.price, qty: 1, art: product.art, image: product.image });
+      cart.push({
+        id: product.id,
+        name: product.name,
+        size: size,
+        color: colorObj ? colorObj.id : null,
+        colorLabel: colorObj ? colorObj.label : null,
+        price: product.price,
+        qty: 1,
+        art: product.art,
+        image: colorObj ? colorObj.image : product.image
+      });
     }
     renderCart();
   }
@@ -1268,7 +1328,7 @@
   // basics.products is filled in once products.json has loaded (see
   // initShop below) — automne/hiver stay empty until those drops exist.
   var COLLECTIONS = {
-    basics: { label: 'Collection Fauteux Basics', meta: 'Six Pièces &middot; CAD', products: [] },
+    basics: { label: 'Collection Fauteux Basics', meta: 'Trois Pièces &middot; CAD', products: [] },
     automne: { label: 'Collection Automne 2026', meta: 'À venir', products: [] },
     hiver: { label: 'Collection Hiver 2027', meta: 'À venir', products: [] }
   };
@@ -1281,58 +1341,101 @@
       var card = document.createElement('div');
       card.className = 'product-card';
       var singleSize = p.sizes.length === 1;
-      var allSoldOut = p.sizes.every(function(s){ return !isSizeAvailable(p.id, s); });
-      var defaultSize = (singleSize && isSizeAvailable(p.id, p.sizes[0])) ? p.sizes[0] : '';
-      card.dataset.selectedSize = defaultSize;
+      var hasColors = !!(p.colors && p.colors.length);
+      var defaultColorId = hasColors ? p.colors[0].id : null;
+      card.dataset.selectedColor = defaultColorId || '';
 
-      var sizeButtons = p.sizes.map(function(s){
-        var available = isSizeAvailable(p.id, s);
-        var cls = 'size-btn' + (s === defaultSize ? ' active' : '') + (available ? '' : ' sold-out');
-        return '<button type="button" class="' + cls + '" data-size="' + s + '"' + (available ? '' : ' disabled') + '>' + s + '</button>';
-      }).join('');
+      var colorButtons = hasColors ? p.colors.map(function(c){
+        var cls = 'color-swatch' + (c.id === defaultColorId ? ' active' : '');
+        return '<button type="button" class="' + cls + '" data-color="' + c.id + '" style="background:' + c.swatch + '" title="' + c.label + '" aria-label="' + c.label + '"></button>';
+      }).join('') : '';
 
       card.innerHTML =
-        '<div class="product-frame' + (p.image ? ' has-image' : '') + '">' + productVisualHTML(p, true) + '</div>' +
+        '<div class="product-frame' + ' has-image' + '">' + productVisualHTML(p, true, defaultColorId) + '</div>' +
         '<div class="product-info">' +
           '<span class="product-name wordmark-face">' + p.name + '<span class="sub">' + p.sub + '</span></span>' +
           '<span class="product-price">' + money(p.price) + '</span>' +
         '</div>' +
-        '<div class="size-row">' + sizeButtons + '</div>' +
-        '<button class="product-add" type="button"' + (allSoldOut ? ' disabled' : '') + '>' + (allSoldOut ? 'Épuisé' : 'Ajouter au panier') + '</button>';
+        (hasColors ? '<div class="color-row">' + colorButtons + '</div>' : '') +
+        '<div class="size-row"></div>' +
+        '<button class="product-add" type="button">Ajouter au panier</button>';
 
-      if(!singleSize){
-        card.querySelectorAll('.size-btn:not(.sold-out)').forEach(function(btn){
+      var sizeRow = card.querySelector('.size-row');
+      var addBtn = card.querySelector('.product-add');
+
+      // Availability depends on the chosen color, so the size row (which
+      // sizes are sold out) and the add button's disabled state both get
+      // rebuilt any time the color selection changes, not just once here.
+      function refreshSizes(){
+        var colorId = card.dataset.selectedColor || null;
+        var allSoldOut = p.sizes.every(function(s){ return !isSizeAvailable(p.id, colorId, s); });
+        var currentSize = card.dataset.selectedSize;
+        if(currentSize && !isSizeAvailable(p.id, colorId, currentSize)){
+          currentSize = '';
+        }
+        var defaultSize = (singleSize && isSizeAvailable(p.id, colorId, p.sizes[0])) ? p.sizes[0] : currentSize;
+        card.dataset.selectedSize = defaultSize || '';
+
+        sizeRow.innerHTML = p.sizes.map(function(s){
+          var available = isSizeAvailable(p.id, colorId, s);
+          var cls = 'size-btn' + (s === defaultSize ? ' active' : '') + (available ? '' : ' sold-out');
+          return '<button type="button" class="' + cls + '" data-size="' + s + '"' + (available ? '' : ' disabled') + '>' + s + '</button>';
+        }).join('');
+
+        if(!singleSize){
+          sizeRow.querySelectorAll('.size-btn:not(.sold-out)').forEach(function(btn){
+            btn.addEventListener('click', function(e){
+              e.stopPropagation(); // quick-add on the card, not a click-through to the product page
+              sizeRow.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
+              btn.classList.add('active');
+              card.dataset.selectedSize = btn.dataset.size;
+            });
+          });
+        }
+
+        addBtn.disabled = allSoldOut;
+        addBtn.textContent = allSoldOut ? 'Épuisé' : 'Ajouter au panier';
+      }
+      refreshSizes();
+
+      if(hasColors){
+        card.querySelectorAll('.color-swatch').forEach(function(btn){
           btn.addEventListener('click', function(e){
-            e.stopPropagation(); // quick-add on the card, not a click-through to the product page
-            card.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
+            e.stopPropagation();
+            card.querySelectorAll('.color-swatch').forEach(function(b){ b.classList.remove('active'); });
             btn.classList.add('active');
-            card.dataset.selectedSize = btn.dataset.size;
+            card.dataset.selectedColor = btn.dataset.color;
+            var img = card.querySelector('.product-frame img');
+            if(img){
+              var colorObj = getColorObj(p, btn.dataset.color);
+              if(colorObj) img.src = colorObj.image;
+            }
+            refreshSizes();
           });
         });
       }
 
-      var addBtn = card.querySelector('.product-add');
-      if(!allSoldOut){
-        addBtn.addEventListener('click', function(e){
-          e.stopPropagation();
-          var size = card.dataset.selectedSize;
-          if(!size || !isSizeAvailable(p.id, size)){
-            addBtn.classList.remove('shake');
-            void addBtn.offsetWidth;
-            addBtn.classList.add('shake');
-            addBtn.textContent = size ? 'Cette taille est épuisée' : 'Choisir une taille';
-            setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('shake'); }, 1400);
-            return;
-          }
-          addToCart(p, size);
-          addBtn.textContent = 'Ajouté';
-          addBtn.classList.add('added');
-          setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('added'); }, 1100);
-        });
-      }
+      addBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        if(addBtn.disabled) return;
+        var size = card.dataset.selectedSize;
+        var colorId = card.dataset.selectedColor || null;
+        if(!size || !isSizeAvailable(p.id, colorId, size)){
+          addBtn.classList.remove('shake');
+          void addBtn.offsetWidth;
+          addBtn.classList.add('shake');
+          addBtn.textContent = size ? 'Cette taille est épuisée' : 'Choisir une taille';
+          setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('shake'); }, 1400);
+          return;
+        }
+        addToCart(p, size, colorId);
+        addBtn.textContent = 'Ajouté';
+        addBtn.classList.add('added');
+        setTimeout(function(){ addBtn.textContent = 'Ajouter au panier'; addBtn.classList.remove('added'); }, 1100);
+      });
 
       // clicking the card itself (image, name, price — anywhere but the
-      // size/add controls above) opens the full product page
+      // color/size/add controls above) opens the full product page
       card.addEventListener('click', function(){
         openProductView(p);
       });
@@ -1496,7 +1599,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: cart.map(function(item){
-            return { id: item.id, size: item.size, qty: item.qty };
+            return { id: item.id, size: item.size, color: item.color, qty: item.qty };
           }),
           returnPath: window.location.pathname
         })
@@ -1555,6 +1658,7 @@
 
   // ---- Product detail page (one per product, deep-linkable via #produit/id) ----
   var currentProductSize = '';
+  var currentProductColor = null;
 
   function findProductById(id){
     for(var key in COLLECTIONS){
@@ -1567,46 +1671,81 @@
   function openProductView(product, opts){
     opts = opts || {};
     var singleSize = product.sizes.length === 1;
-    var allSoldOut = product.sizes.every(function(s){ return !isSizeAvailable(product.id, s); });
-    currentProductSize = (singleSize && isSizeAvailable(product.id, product.sizes[0])) ? product.sizes[0] : '';
+    var hasColors = !!(product.colors && product.colors.length);
+    currentProductColor = hasColors ? product.colors[0].id : null;
 
     var artEl = document.getElementById('productArt');
-    artEl.className = 'product-frame' + (product.image ? ' has-image' : '');
-    artEl.innerHTML = productVisualHTML(product, true);
+    artEl.className = 'product-frame has-image';
+    artEl.innerHTML = productVisualHTML(product, true, currentProductColor);
     document.getElementById('productTitle').textContent = product.name;
     document.getElementById('productDetailSub').textContent = product.sub;
     document.getElementById('productDetailPrice').textContent = money(product.price);
     document.getElementById('productDetailDesc').textContent = product.desc || '';
+    document.getElementById('productColorDisclaimer').style.display = hasColors ? 'block' : 'none';
 
     var sizeRow = document.getElementById('productSizeRow');
-    sizeRow.innerHTML = product.sizes.map(function(s){
-      var available = isSizeAvailable(product.id, s);
-      var cls = 'size-btn' + (s === currentProductSize ? ' active' : '') + (available ? '' : ' sold-out');
-      return '<button type="button" class="' + cls + '" data-size="' + s + '"' + (available ? '' : ' disabled') + '>' + s + '</button>';
-    }).join('');
-    if(!singleSize){
-      sizeRow.querySelectorAll('.size-btn:not(.sold-out)').forEach(function(btn){
+    var colorRow = document.getElementById('productColorRow');
+    var addBtns = [document.getElementById('productAddBtn'), document.getElementById('productMobileAddBtn')];
+    document.getElementById('productMobileBarPrice').textContent = money(product.price);
+
+    // Availability depends on the chosen color, so the size row and the
+    // add buttons' disabled state both get rebuilt whenever color changes.
+    function refreshSizes(){
+      var allSoldOut = product.sizes.every(function(s){ return !isSizeAvailable(product.id, currentProductColor, s); });
+      if(currentProductSize && !isSizeAvailable(product.id, currentProductColor, currentProductSize)){
+        currentProductSize = '';
+      }
+      currentProductSize = (singleSize && isSizeAvailable(product.id, currentProductColor, product.sizes[0])) ? product.sizes[0] : currentProductSize;
+
+      sizeRow.innerHTML = product.sizes.map(function(s){
+        var available = isSizeAvailable(product.id, currentProductColor, s);
+        var cls = 'size-btn' + (s === currentProductSize ? ' active' : '') + (available ? '' : ' sold-out');
+        return '<button type="button" class="' + cls + '" data-size="' + s + '"' + (available ? '' : ' disabled') + '>' + s + '</button>';
+      }).join('');
+      if(!singleSize){
+        sizeRow.querySelectorAll('.size-btn:not(.sold-out)').forEach(function(btn){
+          btn.addEventListener('click', function(){
+            sizeRow.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
+            btn.classList.add('active');
+            currentProductSize = btn.dataset.size;
+          });
+        });
+      }
+
+      addBtns.forEach(function(btn){
+        btn.textContent = allSoldOut ? 'Épuisé' : 'Ajouter au panier';
+        btn.disabled = allSoldOut;
+        btn.classList.remove('added', 'shake');
+      });
+    }
+
+    colorRow.innerHTML = hasColors ? product.colors.map(function(c){
+      var cls = 'color-swatch' + (c.id === currentProductColor ? ' active' : '');
+      return '<button type="button" class="' + cls + '" data-color="' + c.id + '" style="background:' + c.swatch + '" title="' + c.label + '" aria-label="' + c.label + '"></button>';
+    }).join('') : '';
+    if(hasColors){
+      colorRow.querySelectorAll('.color-swatch').forEach(function(btn){
         btn.addEventListener('click', function(){
-          sizeRow.querySelectorAll('.size-btn').forEach(function(b){ b.classList.remove('active'); });
+          colorRow.querySelectorAll('.color-swatch').forEach(function(b){ b.classList.remove('active'); });
           btn.classList.add('active');
-          currentProductSize = btn.dataset.size;
+          currentProductColor = btn.dataset.color;
+          var colorObj = getColorObj(product, currentProductColor);
+          if(colorObj) artEl.innerHTML = productVisualHTML(product, true, currentProductColor);
+          refreshSizes();
         });
       });
     }
+
+    refreshSizes();
 
     // Two buttons show this product's add-to-cart action — the inline one
     // in the content, and (on mobile only, via CSS) a fixed bar at the
     // bottom of the screen so it's always reachable without scrolling.
     // Both share the exact same behaviour/state, driven from one place.
-    var addBtns = [document.getElementById('productAddBtn'), document.getElementById('productMobileAddBtn')];
-    document.getElementById('productMobileBarPrice').textContent = money(product.price);
     addBtns.forEach(function(btn){
-      btn.textContent = allSoldOut ? 'Épuisé' : 'Ajouter au panier';
-      btn.disabled = allSoldOut;
-      btn.classList.remove('added', 'shake');
-      if(allSoldOut){ btn.onclick = null; return; }
       btn.onclick = function(){
-        if(!currentProductSize || !isSizeAvailable(product.id, currentProductSize)){
+        if(btn.disabled) return;
+        if(!currentProductSize || !isSizeAvailable(product.id, currentProductColor, currentProductSize)){
           addBtns.forEach(function(b){
             b.classList.remove('shake');
             void b.offsetWidth;
@@ -1618,7 +1757,7 @@
           }, 1400);
           return;
         }
-        addToCart(product, currentProductSize);
+        addToCart(product, currentProductSize, currentProductColor);
         addBtns.forEach(function(b){ b.textContent = 'Ajouté'; b.classList.add('added'); });
         setTimeout(function(){
           addBtns.forEach(function(b){ b.textContent = 'Ajouter au panier'; b.classList.remove('added'); });

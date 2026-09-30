@@ -193,10 +193,10 @@ async function decrementStock(cartItems) {
           Authorization: 'Bearer ' + process.env.SUPABASE_SERVICE_ROLE_KEY,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ p_product_id: item.id, p_size: item.size, p_qty: item.qty })
+        body: JSON.stringify({ p_product_id: item.id, p_color: item.color || null, p_size: item.size, p_qty: item.qty })
       });
       if (!res.ok) {
-        console.error('Stock decrement request failed for', item.id, item.size, res.status, await res.text());
+        console.error('Stock decrement request failed for', item.id, item.color, item.size, res.status, await res.text());
         continue;
       }
       const rows = await res.json();
@@ -204,12 +204,12 @@ async function decrementStock(cartItems) {
         // The function's own guard (quantity >= p_qty) rejected it — stock
         // ran out between the pre-payment check and payment completing.
         // Rare, but not something to silently lose track of.
-        console.error('Stock decrement guard rejected (already sold out) for', item.id, item.size);
+        console.error('Stock decrement guard rejected (already sold out) for', item.id, item.color, item.size);
         continue;
       }
-      results.push({ id: item.id, size: item.size, remaining: rows[0].new_quantity });
+      results.push({ id: item.id, color: item.color, size: item.size, remaining: rows[0].new_quantity });
     } catch (err) {
-      console.error('Stock decrement error for', item.id, item.size, err);
+      console.error('Stock decrement error for', item.id, item.color, item.size, err);
     }
   }
   return results;
@@ -222,7 +222,7 @@ async function sendOrderNotificationEmail(stripe, session, details, stockResults
 
   const lowStock = (stockResults || []).filter((r) => r.remaining <= LOW_STOCK_THRESHOLD);
   const lowStockNote = lowStock.length
-    ? '\n⚠️ Stock bas — ' + lowStock.map((r) => r.id + ' (' + r.size + ') : ' + r.remaining + ' restant(s)').join(', ') + '\n'
+    ? '\n⚠️ Stock bas — ' + lowStock.map((r) => r.id + (r.color ? ' ' + r.color : '') + ' (' + r.size + ') : ' + r.remaining + ' restant(s)').join(', ') + '\n'
     : '';
 
   const body =

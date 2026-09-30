@@ -60,11 +60,11 @@ async function checkStock(items) {
   }
 
   const orFilter = items
-    .map((item) => 'and(product_id.eq.' + encodeURIComponent(item.id) + ',size.eq.' + encodeURIComponent(item.size) + ')')
+    .map((item) => 'and(product_id.eq.' + encodeURIComponent(item.id) + ',color.eq.' + encodeURIComponent(item.color || '') + ',size.eq.' + encodeURIComponent(item.size) + ')')
     .join(',');
 
   const res = await fetch(
-    process.env.SUPABASE_URL + '/rest/v1/product_stock?select=product_id,size,quantity&or=(' + orFilter + ')',
+    process.env.SUPABASE_URL + '/rest/v1/product_stock?select=product_id,color,size,quantity&or=(' + orFilter + ')',
     {
       headers: {
         apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -81,14 +81,14 @@ async function checkStock(items) {
   const rows = await res.json();
 
   const stockByKey = {};
-  rows.forEach((row) => { stockByKey[row.product_id + ':' + row.size] = row.quantity; });
+  rows.forEach((row) => { stockByKey[row.product_id + ':' + (row.color || '') + ':' + row.size] = row.quantity; });
 
   for (const item of items) {
     const qty = Math.max(1, Math.min(20, parseInt(item.qty, 10) || 1));
-    const available = stockByKey[item.id + ':' + item.size];
-    // no row at all for that product/size = not tracked, don't block it
+    const available = stockByKey[item.id + ':' + (item.color || '') + ':' + item.size];
+    // no row at all for that product/color/size = not tracked, don't block it
     if (available !== undefined && available < qty) {
-      return { ok: false, id: item.id, size: item.size, available };
+      return { ok: false, id: item.id, size: item.size, color: item.color, available };
     }
   }
   return { ok: true };
@@ -153,11 +153,13 @@ module.exports = async (req, res) => {
     if (!stock.ok) {
       const product = PRODUCTS.find((p) => p.id === stock.id);
       const name = product ? product.name : stock.id;
+      const colorObj = product && product.colors ? product.colors.find((c) => c.id === stock.color) : null;
+      const label = name + (colorObj ? ' — ' + colorObj.label : '') + ' — taille ' + stock.size;
       res.status(409).json({
         error: stock.available > 0
-          ? name + ' — taille ' + stock.size + ' : il n\'en reste que ' + stock.available + '.'
-          : name + ' — taille ' + stock.size + ' est épuisé.',
-        outOfStock: { id: stock.id, size: stock.size, available: stock.available }
+          ? label + ' : il n\'en reste que ' + stock.available + '.'
+          : label + ' est épuisé.',
+        outOfStock: { id: stock.id, size: stock.size, color: stock.color, available: stock.available }
       });
       return;
     }
@@ -167,7 +169,7 @@ module.exports = async (req, res) => {
     // This is the same file the storefront reads its catalog from, so a
     // product/price edit only ever has to be made in one place.
     const CATALOG = {};
-    PRODUCTS.forEach((p) => { CATALOG[p.id] = { name: p.name, price: p.price, image: p.image }; });
+    PRODUCTS.forEach((p) => { CATALOG[p.id] = { name: p.name, price: p.price, colors: p.colors, image: p.image }; });
 
     const taxRateId = await getOrCreateTaxRate(stripe);
 
@@ -176,13 +178,18 @@ module.exports = async (req, res) => {
       if (!product) {
         throw new Error('Produit inconnu : ' + item.id);
       }
+      const colorObj = product.colors ? (product.colors.find((c) => c.id === item.color) || product.colors[0]) : null;
       const qty = Math.max(1, Math.min(20, parseInt(item.qty, 10) || 1));
       // Stripe needs a fully-qualified, publicly reachable URL here — a
       // relative path like the one stored in products.json is meaningless
       // once it's on Stripe's own checkout page rather than our site.
-      const productData = { name: product.name + ' — Taille ' + item.size };
-      if (product.image) {
-        productData.images = ['https://maisonfauteux.ca/' + product.image];
+      const image = colorObj ? colorObj.image : product.image;
+      const nameParts = [product.name];
+      if (colorObj) nameParts.push(colorObj.label);
+      nameParts.push('Taille ' + item.size);
+      const productData = { name: nameParts.join(' — ') };
+      if (image) {
+        productData.images = ['https://maisonfauteux.ca/' + image];
       }
       return {
         price_data: {
@@ -209,6 +216,7 @@ module.exports = async (req, res) => {
     const cartForMetadata = items.map((item) => ({
       id: item.id,
       size: item.size,
+      color: item.color || null,
       qty: Math.max(1, Math.min(20, parseInt(item.qty, 10) || 1))
     }));
 
