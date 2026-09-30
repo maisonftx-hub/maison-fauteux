@@ -167,7 +167,7 @@ module.exports = async (req, res) => {
     // This is the same file the storefront reads its catalog from, so a
     // product/price edit only ever has to be made in one place.
     const CATALOG = {};
-    PRODUCTS.forEach((p) => { CATALOG[p.id] = { name: p.name, price: p.price }; });
+    PRODUCTS.forEach((p) => { CATALOG[p.id] = { name: p.name, price: p.price, image: p.image }; });
 
     const taxRateId = await getOrCreateTaxRate(stripe);
 
@@ -177,12 +177,17 @@ module.exports = async (req, res) => {
         throw new Error('Produit inconnu : ' + item.id);
       }
       const qty = Math.max(1, Math.min(20, parseInt(item.qty, 10) || 1));
+      // Stripe needs a fully-qualified, publicly reachable URL here — a
+      // relative path like the one stored in products.json is meaningless
+      // once it's on Stripe's own checkout page rather than our site.
+      const productData = { name: product.name + ' — Taille ' + item.size };
+      if (product.image) {
+        productData.images = ['https://maisonfauteux.ca/' + product.image];
+      }
       return {
         price_data: {
           currency: 'cad',
-          product_data: {
-            name: product.name + ' — Taille ' + item.size
-          },
+          product_data: productData,
           unit_amount: Math.round(product.price * 100)
         },
         quantity: qty,
