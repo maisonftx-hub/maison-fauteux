@@ -5,7 +5,7 @@
     "sub": "Sweat à Capuche Signature",
     "price": 50,
     "flat": "01",
-    "sizes": ["S", "M", "L", "XL"],
+    "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
       { "id": "noir", "label": "Noir", "swatch": "#0d0a0b", "image": "assets/products/hoodie-noir.webp" },
       { "id": "bourgogne", "label": "Bourgogne", "swatch": "#7c1f3f", "image": "assets/products/hoodie-bourgogne.webp" }
@@ -19,7 +19,7 @@
     "sub": "Col Rond Classique",
     "price": 45,
     "flat": "02",
-    "sizes": ["S", "M", "L", "XL"],
+    "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
       { "id": "noir", "label": "Noir", "swatch": "#0d0a0b", "image": "assets/products/crewneck-noir.webp" },
       { "id": "bourgogne", "label": "Bourgogne", "swatch": "#7c1f3f", "image": "assets/products/crewneck-bourgogne.webp" }
@@ -33,7 +33,7 @@
     "sub": "Pull Quart-Zip",
     "price": 45,
     "flat": "03",
-    "sizes": ["S", "M", "L", "XL"],
+    "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
       { "id": "noir", "label": "Noir", "swatch": "#0d0a0b", "image": "assets/products/quarterzip-noir.webp" },
       { "id": "bourgogne", "label": "Bourgogne", "swatch": "#7c1f3f", "image": "assets/products/quarterzip-bourgogne.webp" }
