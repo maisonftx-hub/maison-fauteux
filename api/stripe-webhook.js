@@ -85,89 +85,108 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-// The customer confirmation's HTML version — inline styles throughout
-// (email clients strip <style> blocks unpredictably), a light palette
-// matching the brand's garnet accent rather than the site's dark theme,
-// since a light background reads reliably across every email client and
-// prints cleanly, unlike a dark-background email.
+// The customer confirmation's HTML version — the site's actual dark
+// palette and fonts, not an invented light template. Tables (not divs)
+// throughout, with both a CSS background and an HTML bgcolor attribute on
+// every colored cell: a dark design has more to lose than a light one if
+// a client ignores the CSS half and falls back to a plain white default,
+// so both are set everywhere rather than relying on the CSS alone.
 function buildCustomerEmailHtml(details) {
-  const paper = '#faf7f5', ink = '#241318', inkSoft = '#6b4a52', line = '#e4d9d9';
-  const garnet = '#7c1f3f', garnetWash = '#f6e9ec';
+  const ground = '#170c10', groundRaised = '#241318', muted = '#120d0f';
+  const ink = '#ece7e3', inkMuted = '#ab929a', line = '#3d2129';
+  const garnet = '#7c1f3f', garnetText = '#cc5f7d';
   const serif = "'Playfair Display', Georgia, 'Times New Roman', serif";
-  const sans = "Arial, Helvetica, sans-serif";
+  const sans = "'Archivo', Arial, Helvetica, sans-serif";
+  const mono = "'Space Mono', 'Courier New', monospace";
 
   const itemRows = details.items.map((li) => (
     '<tr>' +
       '<td style="padding:12px 0;border-bottom:1px solid ' + line + ';font-family:' + sans + ';font-size:14px;color:' + ink + ';">' +
         escapeHtml(li.description) +
       '</td>' +
-      '<td style="padding:12px 0;border-bottom:1px solid ' + line + ';font-family:' + sans + ';font-size:14px;color:' + inkSoft + ';text-align:center;">' +
+      '<td style="padding:12px 0;border-bottom:1px solid ' + line + ';font-family:' + sans + ';font-size:14px;color:' + inkMuted + ';text-align:center;">' +
         '×' + li.quantity +
       '</td>' +
-      '<td style="padding:12px 0;border-bottom:1px solid ' + line + ';font-family:' + sans + ';font-size:14px;color:' + ink + ';text-align:right;white-space:nowrap;">' +
+      '<td style="padding:12px 0;border-bottom:1px solid ' + line + ';font-family:' + mono + ';font-size:14px;color:' + ink + ';text-align:right;white-space:nowrap;">' +
         (li.amount_total / 100).toFixed(2) + ' $' +
       '</td>' +
     '</tr>'
   )).join('');
 
-  const pickupBox = details.isPickup
-    ? '<div style="margin-top:24px;padding:16px 20px;background:' + garnetWash + ';border-left:3px solid ' + garnet + ';">' +
-        '<p style="margin:0;font-family:' + sans + ';font-size:13px;font-weight:bold;letter-spacing:0.04em;text-transform:uppercase;color:' + garnet + ';">Ramassage</p>' +
-        '<p style="margin:6px 0 0;font-family:' + sans + ';font-size:14px;line-height:1.6;color:' + ink + ';">Pavillon Fauteux — 57, rue Louis-Pasteur, Ottawa (Ontario) K1N 6N5, certaines périodes seulement. Nous vous recontacterons dès qu\'elle sera prête.</p>' +
-      '</div>'
-    : '<div style="margin-top:24px;padding:16px 20px;background:' + garnetWash + ';border-left:3px solid ' + garnet + ';">' +
-        '<p style="margin:0;font-family:' + sans + ';font-size:13px;font-weight:bold;letter-spacing:0.04em;text-transform:uppercase;color:' + garnet + ';">Livraison</p>' +
-        '<p style="margin:6px 0 0;font-family:' + sans + ';font-size:14px;line-height:1.6;color:' + ink + ';">' + escapeHtml(details.address) + '</p>' +
-      '</div>';
+  const pickupHeading = details.isPickup ? 'Ramassage' : 'Livraison';
+  const pickupBodyText = details.isPickup
+    ? 'Pavillon Fauteux — 57, rue Louis-Pasteur, Ottawa (Ontario) K1N 6N5, certaines périodes seulement. Nous vous recontacterons dès qu\'elle sera prête.'
+    : escapeHtml(details.address);
+  const pickupBox =
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">' +
+      '<tr><td style="padding:16px 20px;background-color:' + groundRaised + ';border-left:3px solid ' + garnet + ';" bgcolor="' + groundRaised + '">' +
+        '<p style="margin:0;font-family:' + mono + ';font-size:12px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + garnetText + ';">' + pickupHeading + '</p>' +
+        '<p style="margin:6px 0 0;font-family:' + sans + ';font-size:14px;line-height:1.6;color:' + ink + ';">' + pickupBodyText + '</p>' +
+      '</td></tr>' +
+    '</table>';
 
   return (
-    '<div style="background:#efe8e5;padding:32px 16px;font-family:' + sans + ';">' +
-      '<div style="max-width:560px;margin:0 auto;background:' + paper + ';border-top:3px solid ' + garnet + ';">' +
-        '<div style="padding:40px 40px 8px;text-align:center;">' +
-          '<div style="font-family:' + serif + ';font-style:italic;font-weight:600;font-size:26px;color:' + ink + ';">Maison Fauteux</div>' +
-        '</div>' +
-        '<div style="padding:16px 40px 40px;">' +
-          '<p style="font-family:' + sans + ';font-size:15px;color:' + ink + ';margin:0 0 4px;">' +
-            'Bonjour' + (details.customer.name ? ' ' + escapeHtml(details.customer.name) : '') + ',' +
-          '</p>' +
-          '<p style="font-family:' + sans + ';font-size:15px;color:' + inkSoft + ';line-height:1.6;margin:0 0 28px;">Merci pour votre commande chez Maison Fauteux !</p>' +
+    '<!doctype html><html><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,600&family=Archivo:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">' +
+    '<style>body{margin:0;padding:0;}</style>' +
+    '</head><body style="margin:0;padding:0;background-color:#0c0709;" bgcolor="#0c0709">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0c0709;" bgcolor="#0c0709">' +
+      '<tr><td align="center" style="padding:32px 16px;">' +
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:' + ground + ';border-top:3px solid ' + garnet + ';" bgcolor="' + ground + '">' +
 
-          '<table role="presentation" width="100%" style="border-collapse:collapse;">' +
-            '<tr>' +
-              '<td style="padding:0 0 8px;font-family:' + sans + ';font-size:11px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + inkSoft + ';border-bottom:1px solid ' + line + ';">Article</td>' +
-              '<td style="padding:0 0 8px;font-family:' + sans + ';font-size:11px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + inkSoft + ';border-bottom:1px solid ' + line + ';text-align:center;">Qté</td>' +
-              '<td style="padding:0 0 8px;font-family:' + sans + ';font-size:11px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + inkSoft + ';border-bottom:1px solid ' + line + ';text-align:right;">Prix</td>' +
-            '</tr>' +
-            itemRows +
-          '</table>' +
+          '<tr><td align="center" style="padding:36px 40px 24px;" bgcolor="' + ground + '">' +
+            '<img src="https://maisonfauteux.ca/assets/logo-white.png" width="180" alt="Maison Fauteux" style="display:block;width:180px;max-width:60%;height:auto;border:0;">' +
+          '</td></tr>' +
 
-          '<table role="presentation" width="100%" style="border-collapse:collapse;margin-top:4px;">' +
-            '<tr>' +
-              '<td style="padding:10px 0 0;font-family:' + sans + ';font-size:13px;color:' + inkSoft + ';">Sous-total</td>' +
-              '<td style="padding:10px 0 0;font-family:' + sans + ';font-size:13px;color:' + ink + ';text-align:right;">' + details.subtotal + ' $</td>' +
-            '</tr>' +
-            '<tr>' +
-              '<td style="padding:4px 0 0;font-family:' + sans + ';font-size:13px;color:' + inkSoft + ';">Livraison/Ramassage</td>' +
-              '<td style="padding:4px 0 0;font-family:' + sans + ';font-size:13px;color:' + ink + ';text-align:right;">' + escapeHtml(details.shippingLabel) + '</td>' +
-            '</tr>' +
-            '<tr>' +
-              '<td style="padding:12px 0 0;border-top:1px solid ' + line + ';font-family:' + sans + ';font-size:15px;font-weight:bold;color:' + ink + ';">Total payé</td>' +
-              '<td style="padding:12px 0 0;border-top:1px solid ' + line + ';font-family:' + sans + ';font-size:15px;font-weight:bold;color:' + ink + ';text-align:right;">' + details.total + ' $</td>' +
-            '</tr>' +
-          '</table>' +
+          '<tr><td style="padding:8px 40px 40px;" bgcolor="' + ground + '">' +
+            '<p style="font-family:' + sans + ';font-size:15px;color:' + ink + ';margin:0 0 4px;">' +
+              'Bonjour' + (details.customer.name ? ' ' + escapeHtml(details.customer.name) : '') + ',' +
+            '</p>' +
+            '<p style="font-family:' + sans + ';font-size:15px;color:' + inkMuted + ';line-height:1.6;margin:0 0 28px;">Merci pour votre commande chez Maison Fauteux !</p>' +
 
-          pickupBox +
+            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+              '<tr>' +
+                '<td style="padding:0 0 8px;font-family:' + mono + ';font-size:11px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + inkMuted + ';border-bottom:1px solid ' + line + ';">Article</td>' +
+                '<td style="padding:0 0 8px;font-family:' + mono + ';font-size:11px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + inkMuted + ';border-bottom:1px solid ' + line + ';text-align:center;">Qté</td>' +
+                '<td style="padding:0 0 8px;font-family:' + mono + ';font-size:11px;font-weight:bold;letter-spacing:0.06em;text-transform:uppercase;color:' + inkMuted + ';border-bottom:1px solid ' + line + ';text-align:right;">Prix</td>' +
+              '</tr>' +
+              itemRows +
+            '</table>' +
 
-          '<p style="font-family:' + sans + ';font-size:13px;color:' + inkSoft + ';line-height:1.6;margin:32px 0 0;">' +
-            'Des questions sur votre commande&nbsp;? Écrivez-nous à ' +
-            '<a href="mailto:' + escapeHtml(details.replyTo) + '" style="color:' + garnet + ';">' + escapeHtml(details.replyTo) + '</a>.' +
-          '</p>' +
-        '</div>' +
-        '<div style="background:' + ink + ';padding:18px 40px;text-align:center;">' +
-          '<span style="font-family:' + serif + ';font-style:italic;color:#ece7e3;font-size:13px;">Maison Fauteux</span>' +
-        '</div>' +
-      '</div>' +
-    '</div>'
+            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:4px;">' +
+              '<tr>' +
+                '<td style="padding:10px 0 0;font-family:' + mono + ';font-size:13px;color:' + inkMuted + ';">Sous-total</td>' +
+                '<td style="padding:10px 0 0;font-family:' + mono + ';font-size:13px;color:' + ink + ';text-align:right;">' + details.subtotal + ' $</td>' +
+              '</tr>' +
+              '<tr>' +
+                '<td style="padding:4px 0 0;font-family:' + mono + ';font-size:13px;color:' + inkMuted + ';">Livraison/Ramassage</td>' +
+                '<td style="padding:4px 0 0;font-family:' + mono + ';font-size:13px;color:' + ink + ';text-align:right;">' + escapeHtml(details.shippingLabel) + '</td>' +
+              '</tr>' +
+              '<tr>' +
+                '<td style="padding:12px 0 0;border-top:1px solid ' + line + ';font-family:' + mono + ';font-size:15px;font-weight:bold;color:' + ink + ';">Total payé</td>' +
+                '<td style="padding:12px 0 0;border-top:1px solid ' + line + ';font-family:' + mono + ';font-size:15px;font-weight:bold;color:' + ink + ';text-align:right;">' + details.total + ' $</td>' +
+              '</tr>' +
+            '</table>' +
+
+            pickupBox +
+
+            '<p style="font-family:' + sans + ';font-size:13px;color:' + inkMuted + ';line-height:1.6;margin:32px 0 0;">' +
+              'Des questions sur votre commande&nbsp;? Écrivez-nous à ' +
+              '<a href="mailto:' + escapeHtml(details.replyTo) + '" style="color:' + garnetText + ';">' + escapeHtml(details.replyTo) + '</a>.' +
+            '</p>' +
+          '</td></tr>' +
+
+          '<tr><td align="center" style="padding:18px 40px;border-top:1px solid ' + line + ';" bgcolor="' + muted + '">' +
+            '<span style="font-family:' + serif + ';font-style:italic;color:' + ink + ';font-size:13px;">Maison Fauteux</span>' +
+          '</td></tr>' +
+
+        '</table>' +
+      '</td></tr>' +
+    '</table>' +
+    '</body></html>'
   );
 }
 
