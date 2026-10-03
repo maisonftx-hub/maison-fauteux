@@ -428,6 +428,37 @@
     color: var(--ink-muted);
     margin-top: 2px;
   }
+  .price-was{ color: var(--ink-faint); text-decoration: line-through; margin-right: 6px; font-size: 0.85em; }
+  .price-now{ color: var(--garnet-text); }
+  .sale-banner{
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 18px;
+    margin: 20px 0 4px;
+    padding: 12px 16px;
+    border: 1px solid var(--garnet);
+    background: var(--ground-raised);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .sale-banner.on{ display: flex; }
+  .sale-banner strong{ color: var(--ink); font-weight: 400; }
+  .sale-countdown{ font-variant-numeric: tabular-nums; color: var(--garnet-text); }
+  .sale-note{
+    display: none;
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .sale-note.on{ display: block; }
   .product-price{
     font-family: var(--mono);
     font-variant-numeric: tabular-nums;
@@ -995,6 +1026,11 @@
       </div>
       <hr class="rule rule-draw reveal">
 
+      <div class="sale-banner" id="saleBanner" role="status">
+        <span><strong>Offre de lancement</strong> &middot; jusqu'au vendredi 9 octobre, 23 h 59</span>
+        <span>Se termine dans <span class="sale-countdown" id="saleCountdown"></span></span>
+      </div>
+
       <div class="collection-tabs reveal" id="collectionTabs" role="tablist">
         <button type="button" class="collection-tab active" role="tab" aria-selected="true" data-collection="basics">Collection Fauteux Basics</button>
         <button type="button" class="collection-tab" role="tab" aria-selected="false" data-collection="automne">Collection Automne 2026</button>
@@ -1098,6 +1134,7 @@
         <h1 class="page-title wordmark-face" id="productTitle"></h1>
         <p class="product-detail-sub" id="productDetailSub"></p>
         <p class="product-detail-price" id="productDetailPrice"></p>
+        <p class="sale-note" id="productSaleNote">Offre de lancement &middot; se termine dans <span class="sale-countdown" id="productSaleCountdown"></span></p>
         <p class="product-detail-desc" id="productDetailDesc"></p>
 
         <div class="color-row" id="productColorRow"></div>
@@ -1228,6 +1265,62 @@
 
   function money(n){ return n.toFixed(0) + " $"; }
 
+  // Launch pricing: a product carries its regular "price" plus an optional
+  // "salePrice" valid until "saleEndsAt". The server applies the same rule
+  // on its own clock (api/create-checkout-session.js), so this is display
+  // logic — it can never change what actually gets charged.
+  function activeSale(p){
+    if(p.salePrice == null || !p.saleEndsAt) return null;
+    return Date.now() < Date.parse(p.saleEndsAt) ? p.salePrice : null;
+  }
+  function currentPrice(p){
+    var s = activeSale(p);
+    return s != null ? s : p.price;
+  }
+  function priceHTML(p){
+    var s = activeSale(p);
+    return s != null
+      ? '<span class="price-was">' + money(p.price) + '</span><span class="price-now">' + money(s) + '</span>'
+      : money(p.price);
+  }
+  function saleEndTime(){
+    var end = 0;
+    PRODUCTS.forEach(function(p){
+      if(activeSale(p) != null){ end = Math.max(end, Date.parse(p.saleEndsAt)); }
+    });
+    return end;
+  }
+  function formatCountdown(ms){
+    var total = Math.max(0, Math.floor(ms / 1000));
+    var d = Math.floor(total / 86400);
+    var h = Math.floor((total % 86400) / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var sec = total % 60;
+    function two(n){ return (n < 10 ? '0' : '') + n; }
+    return (d > 0 ? d + ' j ' : '') + two(h) + ' h ' + two(m) + ' min ' + two(sec) + ' s';
+  }
+  var saleWasActive = false;
+  function tickSale(){
+    var end = saleEndTime();
+    var active = end > Date.now();
+    var text = active ? formatCountdown(end - Date.now()) : '';
+    document.getElementById('saleCountdown').textContent = text;
+    document.getElementById('productSaleCountdown').textContent = text;
+    document.getElementById('saleBanner').classList.toggle('on', active);
+    document.getElementById('productSaleNote').classList.toggle('on', active);
+    if(saleWasActive && !active){
+      // the sale just ended while the page was open: put every price on
+      // screen back to regular without needing a reload
+      renderProductGrid(COLLECTIONS.basics.products);
+      renderCart();
+      if(currentProductObj){
+        document.getElementById('productDetailPrice').innerHTML = priceHTML(currentProductObj);
+        document.getElementById('productMobileBarPrice').innerHTML = priceHTML(currentProductObj);
+      }
+    }
+    saleWasActive = active;
+  }
+
   // A product shows its real photo (a color's "image", or the legacy
   // top-level products.json "image") once one is set; until then it falls
   // back to the placeholder line-art sketch.
@@ -1276,6 +1369,17 @@
   function moneyPrecise(n){ return n.toFixed(2) + " $"; }
 
   function renderCart(){
+    // Prices live in products.json, not in a saved cart: re-derive them on
+    // every render so a cart remembered from before a price change (or the
+    // end of a sale) never shows a stale number, and drop any line whose
+    // product no longer exists in the catalog.
+    if(PRODUCTS.length){
+      cart = cart.filter(function(i){ return PRODUCTS.some(function(p){ return p.id === i.id; }); });
+      cart.forEach(function(i){
+        var p = PRODUCTS.find(function(x){ return x.id === i.id; });
+        i.price = currentPrice(p);
+      });
+    }
     var itemsEl = document.getElementById('cartItems');
     var subtotalEl = document.getElementById('cartSubtotal');
     var bagCount = document.getElementById('bagCount');
@@ -1315,7 +1419,7 @@
         size: size,
         color: colorObj ? colorObj.id : null,
         colorLabel: colorObj ? colorObj.label : null,
-        price: product.price,
+        price: currentPrice(product),
         qty: 1,
         art: product.art,
         image: colorObj ? colorObj.image : product.image
@@ -1354,7 +1458,7 @@
         '<div class="product-frame' + ' has-image' + '">' + productVisualHTML(p, true, defaultColorId) + '</div>' +
         '<div class="product-info">' +
           '<span class="product-name wordmark-face">' + p.name + '<span class="sub">' + p.sub + '</span></span>' +
-          '<span class="product-price">' + money(p.price) + '</span>' +
+          '<span class="product-price">' + priceHTML(p) + '</span>' +
         '</div>' +
         (hasColors ? '<div class="color-row">' + colorButtons + '</div>' : '') +
         '<div class="size-row"></div>' +
@@ -1505,6 +1609,8 @@
       PRODUCTS = results[0];
       COLLECTIONS.basics.products = PRODUCTS;
       initShop();
+      tickSale();
+      setInterval(tickSale, 1000);
     })
     .catch(function(err){
       console.error('Impossible de charger le catalogue :', err);
@@ -1659,6 +1765,7 @@
   // ---- Product detail page (one per product, deep-linkable via #produit/id) ----
   var currentProductSize = '';
   var currentProductColor = null;
+  var currentProductObj = null;
 
   function findProductById(id){
     for(var key in COLLECTIONS){
@@ -1679,14 +1786,15 @@
     artEl.innerHTML = productVisualHTML(product, true, currentProductColor);
     document.getElementById('productTitle').textContent = product.name;
     document.getElementById('productDetailSub').textContent = product.sub;
-    document.getElementById('productDetailPrice').textContent = money(product.price);
+    currentProductObj = product;
+    document.getElementById('productDetailPrice').innerHTML = priceHTML(product);
     document.getElementById('productDetailDesc').textContent = product.desc || '';
     document.getElementById('productColorDisclaimer').style.display = hasColors ? 'block' : 'none';
 
     var sizeRow = document.getElementById('productSizeRow');
     var colorRow = document.getElementById('productColorRow');
     var addBtns = [document.getElementById('productAddBtn'), document.getElementById('productMobileAddBtn')];
-    document.getElementById('productMobileBarPrice').textContent = money(product.price);
+    document.getElementById('productMobileBarPrice').innerHTML = priceHTML(product);
 
     // Availability depends on the chosen color, so the size row and the
     // add buttons' disabled state both get rebuilt whenever color changes.

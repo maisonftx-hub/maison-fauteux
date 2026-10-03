@@ -39,6 +39,14 @@ const SHIPPING = {
   capCents: 1800        // never charge more than this per order
 };
 
+// A product is on sale until its saleEndsAt moment passes — decided here on
+// the server clock, so a stale page (or a tampered one) can never get the
+// sale price after the sale has ended.
+function effectivePrice(p) {
+  const onSale = p.salePrice != null && p.saleEndsAt && Date.now() < Date.parse(p.saleEndsAt);
+  return onSale ? p.salePrice : p.price;
+}
+
 function computeShippingCents(items) {
   const totalQty = items.reduce((sum, item) => {
     return sum + Math.max(1, Math.min(20, parseInt(item.qty, 10) || 1));
@@ -169,7 +177,7 @@ module.exports = async (req, res) => {
     // This is the same file the storefront reads its catalog from, so a
     // product/price edit only ever has to be made in one place.
     const CATALOG = {};
-    PRODUCTS.forEach((p) => { CATALOG[p.id] = { name: p.name, price: p.price, colors: p.colors, image: p.image }; });
+    PRODUCTS.forEach((p) => { CATALOG[p.id] = { name: p.name, price: effectivePrice(p), colors: p.colors, image: p.image }; });
 
     const taxRateId = await getOrCreateTaxRate(stripe);
 

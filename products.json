@@ -3,7 +3,9 @@
     "id": "hoodie",
     "name": "Le Hoodie",
     "sub": "Sweat à Capuche Signature",
-    "price": 36,
+    "price": 55,
+    "salePrice": 50,
+    "saleEndsAt": "2026-10-09T23:59:59-04:00",
     "flat": "01",
     "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
@@ -17,7 +19,9 @@
     "id": "crewneck",
     "name": "Le Crewneck",
     "sub": "Col Rond Classique",
-    "price": 36,
+    "price": 50,
+    "salePrice": 45,
+    "saleEndsAt": "2026-10-09T23:59:59-04:00",
     "flat": "02",
     "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
@@ -31,7 +35,9 @@
     "id": "quarterzip",
     "name": "Le Quart-Zip",
     "sub": "Pull Quart-Zip",
-    "price": 36,
+    "price": 50,
+    "salePrice": 45,
+    "saleEndsAt": "2026-10-09T23:59:59-04:00",
     "flat": "03",
     "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
