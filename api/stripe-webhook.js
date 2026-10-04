@@ -37,43 +37,19 @@ function gmailTransporter() {
   return { transporter, gmailUser };
 }
 
-// Shared order details both emails need — line items, the shipping/pickup
-// choice, the collected address, and the customer's own contact info.
+// Shared order details both emails need — line items, totals, and the
+// customer's own contact info. Orders are pickup-only, so there is no
+// shipping choice or address to carry.
 async function getOrderDetails(stripe, session) {
   const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
   const itemLines = lineItems.data
     .map((li) => '  • ' + li.description + '  ×' + li.quantity + '  —  ' + (li.amount_total / 100).toFixed(2) + ' $')
     .join('\n');
 
-  let shippingLabel = 'Non spécifié';
-  let isPickup = false;
-  if (session.shipping_cost && session.shipping_cost.shipping_rate) {
-    try {
-      const rate = await stripe.shippingRates.retrieve(session.shipping_cost.shipping_rate);
-      isPickup = session.shipping_cost.amount_total === 0;
-      shippingLabel = rate.display_name + ' (' +
-        (session.shipping_cost.amount_total === 0 ? 'Gratuit' : (session.shipping_cost.amount_total / 100).toFixed(2) + ' $') + ')';
-    } catch (e) { /* fall back to the default label above */ }
-  }
-
-  const addressParts = session.shipping_details && session.shipping_details.address
-    ? [
-        session.shipping_details.address.line1,
-        session.shipping_details.address.line2,
-        session.shipping_details.address.city,
-        session.shipping_details.address.state,
-        session.shipping_details.address.postal_code
-      ].filter(Boolean)
-    : [];
-  const address = addressParts.length ? addressParts.join(', ') : 'Non fournie';
-
   return {
     customer: session.customer_details || {},
     items: lineItems.data, // raw, for the HTML email's table
     itemLines, // pre-formatted, for the plain-text emails
-    shippingLabel,
-    isPickup,
-    address,
     subtotal: (session.amount_subtotal / 100).toFixed(2),
     total: (session.amount_total / 100).toFixed(2)
   };
@@ -113,10 +89,8 @@ function buildCustomerEmailHtml(details) {
     '</tr>'
   )).join('');
 
-  const pickupHeading = details.isPickup ? 'Ramassage' : 'Livraison';
-  const pickupBodyText = details.isPickup
-    ? 'Pavillon Fauteux — 57, rue Louis-Pasteur, Ottawa (Ontario) K1N 6N5, certaines périodes seulement. Nous vous recontacterons dès qu\'elle sera prête.'
-    : escapeHtml(details.address);
+  const pickupHeading = 'Ramassage';
+  const pickupBodyText = 'Pavillon Fauteux — 57, rue Louis-Pasteur, Ottawa (Ontario) K1N 6N5, certaines périodes seulement. Nous vous recontacterons dès qu\'elle sera prête.';
   const pickupBox =
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">' +
       '<tr><td style="padding:16px 20px;background-color:' + groundRaised + ';border-left:3px solid ' + garnet + ';" bgcolor="' + groundRaised + '">' +
@@ -162,8 +136,8 @@ function buildCustomerEmailHtml(details) {
                 '<td style="padding:10px 0 0;font-family:' + mono + ';font-size:13px;color:' + ink + ';text-align:right;">' + details.subtotal + ' $</td>' +
               '</tr>' +
               '<tr>' +
-                '<td style="padding:4px 0 0;font-family:' + mono + ';font-size:13px;color:' + inkMuted + ';">Livraison/Ramassage</td>' +
-                '<td style="padding:4px 0 0;font-family:' + mono + ';font-size:13px;color:' + ink + ';text-align:right;">' + escapeHtml(details.shippingLabel) + '</td>' +
+                '<td style="padding:4px 0 0;font-family:' + mono + ';font-size:13px;color:' + inkMuted + ';">Ramassage</td>' +
+                '<td style="padding:4px 0 0;font-family:' + mono + ';font-size:13px;color:' + ink + ';text-align:right;">Gratuit</td>' +
               '</tr>' +
               '<tr>' +
                 '<td style="padding:12px 0 0;border-top:1px solid ' + line + ';font-family:' + mono + ';font-size:15px;font-weight:bold;color:' + ink + ';">Total payé</td>' +
@@ -253,8 +227,7 @@ async function sendOrderNotificationEmail(stripe, session, details, stockResults
     lowStockNote + '\n' +
     'Sous-total : ' + details.subtotal + ' $\n' +
     'Total payé : ' + details.total + ' $\n\n' +
-    'Livraison/Ramassage : ' + details.shippingLabel + '\n' +
-    'Adresse : ' + details.address + '\n\n' +
+    'Ramassage gratuit au Pavillon Fauteux (aucune adresse de livraison — commande à ramasser)\n\n' +
     'Voir dans Stripe : https://dashboard.stripe.com/payments/' + session.payment_intent + '\n';
 
   await transporter.sendMail({
@@ -280,9 +253,7 @@ async function sendCustomerConfirmationEmail(stripe, session, details) {
 
   const { transporter, gmailUser } = gmailTransporter();
 
-  const pickupNote = details.isPickup
-    ? 'Vous pourrez récupérer votre commande au Pavillon Fauteux — 57, rue Louis-Pasteur, Ottawa (Ontario) K1N 6N5 — certaines périodes seulement. Nous vous recontacterons dès qu\'elle sera prête.\n\n'
-    : 'Votre commande sera livrée à :\n' + details.address + '\n\n';
+  const pickupNote = 'Vous pourrez récupérer votre commande au Pavillon Fauteux — 57, rue Louis-Pasteur, Ottawa (Ontario) K1N 6N5 — certaines périodes seulement. Nous vous recontacterons dès qu\'elle sera prête.\n\n';
 
   const body =
     'Bonjour' + (details.customer.name ? ' ' + details.customer.name : '') + ',\n\n' +
@@ -290,7 +261,7 @@ async function sendCustomerConfirmationEmail(stripe, session, details) {
     'Voici votre récapitulatif :\n\n' +
     details.itemLines + '\n\n' +
     'Sous-total : ' + details.subtotal + ' $\n' +
-    'Livraison/Ramassage : ' + details.shippingLabel + '\n' +
+    'Ramassage : Gratuit\n' +
     'Total payé : ' + details.total + ' $\n\n' +
     pickupNote +
     'Des questions sur votre commande ? Écrivez-nous à ' + gmailUser + '.\n\n' +

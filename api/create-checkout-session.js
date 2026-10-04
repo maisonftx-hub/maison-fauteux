@@ -30,29 +30,12 @@ const ALLOWED_ORIGINS = [
 const TAX_RATE_PERCENT = 13;
 const TAX_DISPLAY_NAME = 'TVH (Ontario)';
 
-// A flat shipping fee that scales with order size until the real carrier
-// cost is known. Adjust these three numbers as needed — nothing else in
-// the codebase needs to change to update the shipping price.
-const SHIPPING = {
-  baseCents: 800,       // first item
-  perExtraCents: 300,   // each additional item
-  capCents: 1800        // never charge more than this per order
-};
-
 // A product is on sale until its saleEndsAt moment passes — decided here on
 // the server clock, so a stale page (or a tampered one) can never get the
 // sale price after the sale has ended.
 function effectivePrice(p) {
   const onSale = p.salePrice != null && p.saleEndsAt && Date.now() < Date.parse(p.saleEndsAt);
   return onSale ? p.salePrice : p.price;
-}
-
-function computeShippingCents(items) {
-  const totalQty = items.reduce((sum, item) => {
-    return sum + Math.max(1, Math.min(20, parseInt(item.qty, 10) || 1));
-  }, 0);
-  const amount = SHIPPING.baseCents + SHIPPING.perExtraCents * Math.max(0, totalQty - 1);
-  return Math.min(amount, SHIPPING.capCents);
 }
 
 // Checked here (before payment) so a sold-out item fails fast with a clear
@@ -210,8 +193,6 @@ module.exports = async (req, res) => {
       };
     });
 
-    const shippingCents = computeShippingCents(items);
-
     const origin = req.headers.origin || ('https://' + req.headers.host);
     // GitHub Pages project sites live under a /repo-name/ subpath, unlike
     // Vercel's root — the front-end tells us its own path so the redirect
@@ -232,30 +213,13 @@ module.exports = async (req, res) => {
       mode: 'payment',
       line_items,
       metadata: { cart: JSON.stringify(cartForMetadata) },
-      shipping_address_collection: { allowed_countries: ['CA'] },
-      // Two options shown on Stripe's own page — free pickup at the
-      // faculty, or shipping at a fee that scales with order size (see
-      // computeShippingCents above).
-      shipping_options: [
-        {
-          shipping_rate_data: {
-            type: 'fixed_amount',
-            fixed_amount: { amount: 0, currency: 'cad' },
-            display_name: 'Ramassage gratuit — Pavillon Fauteux, 57 rue Louis-Pasteur (certaines périodes)'
-          }
-        },
-        {
-          shipping_rate_data: {
-            type: 'fixed_amount',
-            fixed_amount: { amount: shippingCents, currency: 'cad' },
-            display_name: 'Livraison au Canada',
-            delivery_estimate: {
-              minimum: { unit: 'business_day', value: 3 },
-              maximum: { unit: 'business_day', value: 10 }
-            }
-          }
+      // Pickup only - no delivery, so no address or shipping rate is collected.
+      // The notice sits right above the pay button on Stripe's page.
+      custom_text: {
+        submit: {
+          message: 'Ramassage gratuit — Pavillon Fauteux, 57 rue Louis-Pasteur, Ottawa (certaines périodes). Aucune livraison.'
         }
-      ],
+      },
       phone_number_collection: { enabled: true },
       // Shows a real "Add promotion code" field on Stripe's own checkout
       // page — Stripe validates and applies the discount itself, nothing
