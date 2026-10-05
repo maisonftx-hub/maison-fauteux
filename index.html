@@ -1423,6 +1423,8 @@
       cart.forEach(function(i){
         var p = PRODUCTS.find(function(x){ return x.id === i.id; });
         i.price = currentPrice(p);
+        var co = i.color ? getColorObj(p, i.color) : null;
+        if(co){ i.colorLabel = co.label; }
       });
     }
     var itemsEl = document.getElementById('cartItems');

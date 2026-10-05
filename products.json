@@ -11,7 +11,7 @@
     "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
       { "id": "noir", "label": "Noir", "swatch": "#0d0a0b", "image": "assets/products/hoodie-noir.webp?v=20261005" },
-      { "id": "bourgogne", "label": "Bourgogne", "swatch": "#7c1f3f", "image": "assets/products/hoodie-bourgogne.webp?v=20261005", "swatchImage": "assets/products/colour-maroon.webp?v=20261005", "swatchName": "Maroon / Marron, PMS 7643C" }
+      { "id": "bourgogne", "label": "Marron", "swatch": "#7c1f3f", "image": "assets/products/hoodie-bourgogne.webp?v=20261005", "swatchImage": "assets/products/colour-maroon.webp?v=20261005", "swatchName": "Maroon / Marron, PMS 7643C" }
     ],
     "desc": "Une coupe généreuse, une capuche doublée et le point de la maison sur la poche kangourou. Le sweat qu'on porte de septembre à avril.",
     "art": "<svg viewBox=\"0 0 100 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M32 18 C32 10 40 5 50 5 C60 5 68 10 68 18 L82 30 L74 42 L68 36 L68 100 C68 106 63 110 57 110 L43 110 C37 110 32 106 32 100 L32 36 L26 42 L18 30 Z\"/><path d=\"M40 20 C43 26 57 26 60 20\"/><circle cx=\"50\" cy=\"55\" r=\"1.4\" fill=\"currentColor\" stroke=\"none\"/></svg>"
@@ -28,7 +28,7 @@
     "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
       { "id": "noir", "label": "Noir", "swatch": "#0d0a0b", "image": "assets/products/crewneck-noir.webp?v=20261005" },
-      { "id": "bourgogne", "label": "Bourgogne", "swatch": "#7c1f3f", "image": "assets/products/crewneck-bourgogne.webp?v=20261005", "swatchImage": "assets/products/colour-maroon.webp?v=20261005", "swatchName": "Maroon / Marron, PMS 7643C" }
+      { "id": "bourgogne", "label": "Marron", "swatch": "#7c1f3f", "image": "assets/products/crewneck-bourgogne.webp?v=20261005", "swatchImage": "assets/products/colour-maroon.webp?v=20261005", "swatchName": "Maroon / Marron, PMS 7643C" }
     ],
     "desc": "Le col rond classique, façonné dans un molleton épais, pensé pour les journées fraîches sur le campus.",
     "art": "<svg viewBox=\"0 0 100 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M30 22 L14 34 L22 46 L32 38 L32 108 C32 111 35 113 38 113 L62 113 C65 113 68 111 68 108 L68 38 L78 46 L86 34 L70 22 C70 22 63 30 50 30 C37 30 30 22 30 22 Z\"/></svg>"
@@ -45,7 +45,7 @@
     "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
       { "id": "noir", "label": "Noir", "swatch": "#0d0a0b", "image": "assets/products/quarterzip-noir.webp?v=20261005" },
-      { "id": "bourgogne", "label": "Bourgogne", "swatch": "#7c1f3f", "image": "assets/products/quarterzip-bourgogne.webp?v=20261005", "swatchImage": "assets/products/colour-maroon.webp?v=20261005", "swatchName": "Maroon / Marron, PMS 7643C" }
+      { "id": "bourgogne", "label": "Marron", "swatch": "#7c1f3f", "image": "assets/products/quarterzip-bourgogne.webp?v=20261005", "swatchImage": "assets/products/colour-maroon.webp?v=20261005", "swatchName": "Maroon / Marron, PMS 7643C" }
     ],
     "desc": "Un quart-zip texturé, entre le hoodie et la chemise — assez habillé pour un cours, assez confortable pour tout le reste.",
     "art": "<svg viewBox=\"0 0 100 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M32 18 C32 10 40 5 50 5 C60 5 68 10 68 18 L82 30 L74 42 L68 36 L68 100 C68 106 63 110 57 110 L43 110 C37 110 32 106 32 100 L32 36 L26 42 L18 30 Z\"/><path d=\"M48 8 L48 32 L44 32 M48 20 L52 20 M48 26 L52 26\"/></svg>"
