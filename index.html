@@ -861,6 +861,36 @@
     margin-top: 48px;
     align-items: start;
   }
+  .product-gallery{ min-width: 0; }
+  .product-frame.is-chart{ padding: 0; background: #ffffff; }
+  .product-frame.is-chart img{ object-fit: contain; }
+  .gallery-thumbs{ display: flex; gap: 10px; margin-top: 12px; }
+  .gallery-thumb{
+    width: 72px;
+    aspect-ratio: 4 / 5;
+    padding: 0;
+    border: 1px solid var(--line);
+    background: var(--ground-raised);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 0.2s ease;
+  }
+  .gallery-thumb:hover{ border-color: var(--ink-muted); }
+  .gallery-thumb.active{ border-color: var(--ink); }
+  .gallery-thumb img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gallery-thumb.chart img{ object-fit: contain; background: #ffffff; }
+  .gallery-thumb .thumb-label{
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 3px 2px;
+    background: rgba(18, 13, 15, 0.82);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 0.5rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+  }
   .product-detail-sub{
     font-family: var(--body);
     color: var(--ink-muted);
@@ -1127,7 +1157,10 @@
     <button type="button" class="page-back" id="productBack">&larr; Retour à la boutique</button>
 
     <div class="product-layout">
-      <div class="product-frame" id="productArt"></div>
+      <div class="product-gallery">
+        <div class="product-frame" id="productArt"></div>
+        <div class="gallery-thumbs" id="galleryThumbs"></div>
+      </div>
 
       <div class="product-detail">
         <span class="eyebrow" id="productEyebrow">Collection Fauteux Basics</span>
@@ -1782,8 +1815,36 @@
     currentProductColor = hasColors ? product.colors[0].id : null;
 
     var artEl = document.getElementById('productArt');
-    artEl.className = 'product-frame has-image';
-    artEl.innerHTML = productVisualHTML(product, true, currentProductColor);
+    var thumbsEl = document.getElementById('galleryThumbs');
+
+    // Picture 1 is the product mockup (changes with the selected colour),
+    // picture 2 is the size chart when the product has one. Thumbnails
+    // switch between them.
+    function showPicture(which){
+      var chart = which === 'chart' && product.sizeChart;
+      artEl.className = 'product-frame has-image' + (chart ? ' is-chart' : '');
+      artEl.innerHTML = chart
+        ? '<img src="' + product.sizeChart + '" alt="Guide des tailles — ' + product.name + '">'
+        : productVisualHTML(product, true, currentProductColor);
+      thumbsEl.querySelectorAll('.gallery-thumb').forEach(function(b){
+        b.classList.toggle('active', b.dataset.pic === (chart ? 'chart' : 'mockup'));
+      });
+    }
+    function renderThumbs(){
+      if(!product.sizeChart){ thumbsEl.innerHTML = ''; return; }
+      var colorObj = getColorObj(product, currentProductColor);
+      var mockupSrc = colorObj ? colorObj.image : product.image;
+      thumbsEl.innerHTML =
+        '<button type="button" class="gallery-thumb active" data-pic="mockup" aria-label="Photo du produit">' +
+          (mockupSrc ? '<img src="' + mockupSrc + '" alt="">' : '') + '</button>' +
+        '<button type="button" class="gallery-thumb chart" data-pic="chart" aria-label="Guide des tailles">' +
+          '<img src="' + product.sizeChart + '" alt=""><span class="thumb-label">Tailles</span></button>';
+      thumbsEl.querySelectorAll('.gallery-thumb').forEach(function(b){
+        b.addEventListener('click', function(){ showPicture(b.dataset.pic); });
+      });
+    }
+    renderThumbs();
+    showPicture('mockup');
     document.getElementById('productTitle').textContent = product.name;
     document.getElementById('productDetailSub').textContent = product.sub;
     currentProductObj = product;
@@ -1838,7 +1899,7 @@
           btn.classList.add('active');
           currentProductColor = btn.dataset.color;
           var colorObj = getColorObj(product, currentProductColor);
-          if(colorObj) artEl.innerHTML = productVisualHTML(product, true, currentProductColor);
+          if(colorObj){ renderThumbs(); showPicture('mockup'); }
           refreshSizes();
         });
       });

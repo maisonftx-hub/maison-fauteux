@@ -7,6 +7,7 @@
     "salePrice": 50,
     "saleEndsAt": "2026-10-09T23:59:59-04:00",
     "flat": "01",
+    "sizeChart": "assets/products/size-chart.webp",
     "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
       { "id": "noir", "label": "Noir", "swatch": "#0d0a0b", "image": "assets/products/hoodie-noir.webp" },
@@ -23,6 +24,7 @@
     "salePrice": 45,
     "saleEndsAt": "2026-10-09T23:59:59-04:00",
     "flat": "02",
+    "sizeChart": "assets/products/size-chart.webp",
     "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
       { "id": "noir", "label": "Noir", "swatch": "#0d0a0b", "image": "assets/products/crewneck-noir.webp" },
@@ -39,6 +41,7 @@
     "salePrice": 45,
     "saleEndsAt": "2026-10-09T23:59:59-04:00",
     "flat": "03",
+    "sizeChart": "assets/products/size-chart.webp",
     "sizes": ["XS", "S", "M", "L", "XL", "2XL"],
     "colors": [
       { "id": "noir", "label": "Noir", "swatch": "#0d0a0b", "image": "assets/products/quarterzip-noir.webp" },
