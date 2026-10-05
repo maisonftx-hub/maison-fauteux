@@ -1833,30 +1833,57 @@
     // picture 2 is the size chart when the product has one. Thumbnails
     // switch between them.
     function showPicture(which){
-      var chart = which === 'chart' && product.sizeChart;
-      artEl.className = 'product-frame has-image' + (chart ? ' is-chart' : '');
-      artEl.innerHTML = chart
-        ? '<img src="' + product.sizeChart + '" alt="Guide des tailles — ' + product.name + '">'
+      var co = getColorObj(product, currentProductColor);
+      var src = null, alt = '', cls = 'product-frame has-image';
+      if(which === 'chart' && product.sizeChart){
+        src = product.sizeChart; alt = 'Guide des tailles — ' + product.name; cls += ' is-chart';
+      } else if(which === 'swatch' && co && co.swatchImage){
+        src = co.swatchImage; alt = 'Couleur réelle / Actual colour — ' + co.label;
+      } else {
+        which = 'mockup';
+      }
+      artEl.className = cls;
+      artEl.innerHTML = src
+        ? '<img src="' + src + '" alt="' + alt + '">'
         : productVisualHTML(product, true, currentProductColor);
       thumbsEl.querySelectorAll('.gallery-thumb').forEach(function(b){
-        b.classList.toggle('active', b.dataset.pic === (chart ? 'chart' : 'mockup'));
+        b.classList.toggle('active', b.dataset.pic === which);
       });
     }
+    // Picture 1 = mockup, picture 2 = the real-colour swatch (only for
+    // colours that define one), last = size chart.
     function renderThumbs(){
-      if(!product.sizeChart){ thumbsEl.innerHTML = ''; return; }
-      var colorObj = getColorObj(product, currentProductColor);
-      var mockupSrc = colorObj ? colorObj.image : product.image;
+      var co = getColorObj(product, currentProductColor);
+      var swatch = co && co.swatchImage;
+      if(!product.sizeChart && !swatch){ thumbsEl.innerHTML = ''; return; }
+      var mockupSrc = co ? co.image : product.image;
       thumbsEl.innerHTML =
         '<button type="button" class="gallery-thumb active" data-pic="mockup" aria-label="Photo du produit">' +
           (mockupSrc ? '<img src="' + mockupSrc + '" alt="">' : '') + '</button>' +
-        '<button type="button" class="gallery-thumb chart" data-pic="chart" aria-label="Guide des tailles">' +
-          '<img src="' + product.sizeChart + '" alt=""><span class="thumb-label">Tailles</span></button>';
+        (swatch
+          ? '<button type="button" class="gallery-thumb" data-pic="swatch" aria-label="Couleur réelle / Actual colour">' +
+              '<img src="' + swatch + '" alt=""><span class="thumb-label">Couleur</span></button>'
+          : '') +
+        (product.sizeChart
+          ? '<button type="button" class="gallery-thumb chart" data-pic="chart" aria-label="Guide des tailles">' +
+              '<img src="' + product.sizeChart + '" alt=""><span class="thumb-label">Tailles</span></button>'
+          : '');
       thumbsEl.querySelectorAll('.gallery-thumb').forEach(function(b){
         b.addEventListener('click', function(){ showPicture(b.dataset.pic); });
       });
     }
+    // The colour disclaimer gets much stronger for a colour whose photos are
+    // known to differ a lot from the real garment (it defines a swatch).
+    function updateDisclaimer(){
+      var el = document.getElementById('productColorDisclaimer');
+      var co = getColorObj(product, currentProductColor);
+      el.textContent = (co && co.swatchImage)
+        ? 'Les couleurs des photos diffèrent fortement de la couleur réelle — voir la photo « Couleur »' + (co.swatchName ? ' (' + co.swatchName + ')' : '') + '. / Photo colours differ heavily from the real colour — see the “Colour” picture' + (co.swatchName ? ' (' + co.swatchName + ')' : '') + '.'
+        : 'Les couleurs affichées peuvent différer légèrement du produit réel — la teinte restera toutefois similaire.';
+    }
     renderThumbs();
     showPicture('mockup');
+    updateDisclaimer();
     document.getElementById('productTitle').textContent = product.name;
     document.getElementById('productDetailSub').textContent = product.sub;
     currentProductObj = product;
@@ -1911,7 +1938,7 @@
           btn.classList.add('active');
           currentProductColor = btn.dataset.color;
           var colorObj = getColorObj(product, currentProductColor);
-          if(colorObj){ renderThumbs(); showPicture('mockup'); }
+          if(colorObj){ renderThumbs(); showPicture('mockup'); updateDisclaimer(); }
           refreshSizes();
         });
       });
