@@ -217,7 +217,7 @@ module.exports = async (req, res) => {
       // The notice sits right above the pay button on Stripe's page.
       custom_text: {
         submit: {
-          message: 'Ramassage gratuit — Pavillon Fauteux, 57 rue Louis-Pasteur, Ottawa (certaines périodes). Aucune livraison.'
+          message: 'Ramassage gratuit — Pavillon Fauteux, 57 rue Louis-Pasteur, Ottawa (certaines périodes). Aucune livraison. Aucun remboursement ni retour — toutes les ventes sont finales. / No refunds or returns — all sales are final.'
         }
       },
       phone_number_collection: { enabled: true },

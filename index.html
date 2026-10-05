@@ -753,6 +753,15 @@
   .cart-checkout{ background: #8a1c2c; border-color: #8a1c2c; }
   .cart-checkout:hover{ background: #a8283a; border-color: #a8283a; }
   .cart-checkout.done{ background: var(--ink); border-color: var(--ink); color: var(--ground); }
+  .final-sale{
+    margin: 14px 0 0;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    line-height: 1.6;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+  }
+  .final-sale span{ display: block; color: var(--ink-faint); }
   .cart-note{
     margin: 12px 0 0;
     font-size: 0.76rem;
@@ -1112,6 +1121,7 @@
     <div class="cart-subtotal"><span>Sous-total</span><span id="cartSubtotal">0&nbsp;$</span></div>
     <button class="btn cart-checkout" id="cartCheckout" type="button">Commander</button>
     <p class="cart-note">Taxes calculées à l'étape suivante &middot; ramassage gratuit au Pavillon Fauteux.</p>
+    <p class="cart-note">Aucun remboursement ni retour &mdash; toutes les ventes sont finales.<br>No refunds or returns &mdash; all sales are final.</p>
   </div>
 </aside>
 
@@ -1147,6 +1157,7 @@
         </div>
         <button class="btn" id="checkoutPayBtn" type="button">Procéder au paiement sécurisé</button>
         <p class="cart-note">Ramassage gratuit au Pavillon Fauteux (certaines périodes) &mdash; aucune livraison. Paiement sécurisé par Stripe.</p>
+        <p class="cart-note"><strong>Aucun remboursement ni retour &mdash; toutes les ventes sont finales.</strong><br>No refunds or returns &mdash; all sales are final.</p>
       </div>
     </div>
   </div>
@@ -1175,6 +1186,7 @@
         <p class="color-disclaimer" id="productColorDisclaimer" style="display:none;">Les couleurs affichées peuvent différer légèrement du produit réel — la teinte restera toutefois similaire.</p>
 
         <button class="btn" id="productAddBtn" type="button">Ajouter au panier</button>
+        <p class="final-sale">Aucun remboursement ni retour &mdash; toutes les ventes sont finales.<span>No refunds or returns &mdash; all sales are final.</span></p>
       </div>
     </div>
   </div>
@@ -1195,7 +1207,7 @@
   <div class="page-view-inner wrap confirmation-inner">
     <span class="eyebrow">Commande confirmée</span>
     <h2 class="confirmation-title">Merci.</h2>
-    <p class="confirmation-sub">Votre commande a été reçue avec succès. Un courriel de confirmation vous sera envoyé sous peu, avec les détails de ramassage.</p>
+    <p class="confirmation-sub">Votre commande a été reçue avec succès. Un courriel de confirmation vous sera envoyé sous peu, avec les détails de ramassage.<br>Rappel : aucun remboursement ni retour &mdash; toutes les ventes sont finales. / No refunds or returns &mdash; all sales are final.</p>
     <p class="confirmation-note">Des questions sur votre commande&nbsp;? Écrivez-nous à <a href="mailto:maisonftx@gmail.com">maisonftx@gmail.com</a>.</p>
     <button type="button" class="btn ghost" id="confirmationBack">Retour à la boutique</button>
   </div>

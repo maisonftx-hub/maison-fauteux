@@ -147,6 +147,10 @@ function buildCustomerEmailHtml(details) {
 
             pickupBox +
 
+            '<p style="font-family:' + sans + ';font-size:12px;line-height:1.6;color:' + inkMuted + ';margin:20px 0 0;">' +
+              'Aucun remboursement ni retour — toutes les ventes sont finales.<br>No refunds or returns — all sales are final.' +
+            '</p>' +
+
             '<p style="font-family:' + sans + ';font-size:13px;color:' + inkMuted + ';line-height:1.6;margin:32px 0 0;">' +
               'Des questions sur votre commande&nbsp;? Écrivez-nous à ' +
               '<a href="mailto:' + escapeHtml(details.replyTo) + '" style="color:' + garnetText + ';">' + escapeHtml(details.replyTo) + '</a>.' +
@@ -264,6 +268,7 @@ async function sendCustomerConfirmationEmail(stripe, session, details) {
     'Ramassage : Gratuit\n' +
     'Total payé : ' + details.total + ' $\n\n' +
     pickupNote +
+    'Aucun remboursement ni retour — toutes les ventes sont finales.\nNo refunds or returns — all sales are final.\n\n' +
     'Des questions sur votre commande ? Écrivez-nous à ' + gmailUser + '.\n\n' +
     '— Maison Fauteux';
 
